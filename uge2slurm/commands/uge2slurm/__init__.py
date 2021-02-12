@@ -1,9 +1,10 @@
-from neotermcolor import cprint, colored
+from neotermcolor import cprint
 
 from ..argparser import get_top_parser
 
 from uge2slurm import VERSION
 from uge2slurm.utils.path import get_command_paths
+from uge2slurm.commands.qsub import set_subperser
 
 
 UGE_COMMAND_NAMES = (
@@ -65,15 +66,21 @@ SLURM_COMMAND_NAMES = (
 
 def main():
     parser = get_top_parser()
+
+    subparsers = parser.add_subparsers()
+    set_subperser("qsub", subparsers)
+
     args = parser.parse_args()
+    if args.func:
+        return args.func(args)
+    else:
+        print(parser.prog, VERSION)
+        parser.print_usage()
 
-    print(parser.prog, VERSION)
-    parser.print_usage()
-
-    print("\nUGE Commands:")
-    _print_command_status(UGE_COMMAND_NAMES)
-    print("\nslurm Commands:")
-    _print_command_status(SLURM_COMMAND_NAMES)
+        print("\nUGE Commands:")
+        _print_command_status(UGE_COMMAND_NAMES)
+        print("\nslurm Commands:")
+        _print_command_status(SLURM_COMMAND_NAMES)
 
 
 def _print_command_status(commands):

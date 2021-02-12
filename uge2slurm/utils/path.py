@@ -3,6 +3,8 @@ import sys
 import inspect
 from shutil import _access_check
 
+from neotermcolor import cprint
+
 _WIN_DEFAULT_PATHEXT = ".COM;.EXE;.BAT;.CMD;.VBS;.JS;.WS;.MSC"
 
 BIN_DIRECTORY = os.path.dirname(inspect.stack()[-1].filename)
@@ -76,3 +78,19 @@ def get_command_paths(cmd):
             found_paths.append(path)
 
     return found_paths
+
+
+def get_command_path(cmd):
+    candidates = get_command_paths(cmd)
+    if len(candidates) > 1:
+        cprint(
+            'Warning: "{}" command found at mutiple paths. Use 1st one anyway.'.format(cmd),
+            "yellow",
+            file=sys.stderr
+        )
+        cprint("\t{} -> {}".format(cmd, candidates), "yellow")
+        return candidates[0]
+    elif candidates:
+        return candidates[0]
+    else:
+        return None

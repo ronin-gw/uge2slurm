@@ -34,14 +34,10 @@ setup(
     packages=find_packages(),
     python_requires=">=3.6, <4",
     install_requires=["neotermcolor"],
-    # extras_require={
-    #     "dev': ['check-manifest"],
-    #     "test': ['coverage"],
-    # },
-
     entry_points={
         "console_scripts": [
             "uge2slurm = uge2slurm.commands.uge2slurm:main",
-        ],
+            "qsub = uge2slurm.commands.qsub:main"
+        ]
     }
 )
