@@ -84,5 +84,4 @@ def _print_command_status(commands):
         elif len(candidates) == 1:
             cprint("\t{} -> {}".format(command, candidates[0]), "cyan")
         else:
-            command[0] = colored(command[0], attrs=["bold"])
-            cprint("\t{} -> [{}]".format(", ".join(command), candidates), "red")
+            cprint("\t{} -> {} (duplicated!)".format(command, candidates), "red")

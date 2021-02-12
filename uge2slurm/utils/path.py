@@ -5,7 +5,7 @@ from shutil import _access_check
 
 _WIN_DEFAULT_PATHEXT = ".COM;.EXE;.BAT;.CMD;.VBS;.JS;.WS;.MSC"
 
-BIN_DIRECTORY = os.path.dirname(inspect.stack()[1].filename)
+BIN_DIRECTORY = os.path.dirname(inspect.stack()[-1].filename)
 
 
 def _get_command_paths(cmd, mode=os.F_OK | os.X_OK):
