@@ -87,6 +87,10 @@ def _set_parser(parser):
         title="qsub options",
         description="UGE qsub options"
     )
+    set_qsub_arguments(uge)
+
+
+def set_qsub_arguments(uge):
     uge.add_argument("-@", nargs=1, action=singlearg, metavar="optionfile")
     uge.add_argument("-a", nargs=1, action=singlearg, metavar="date_time")
     uge.add_argument("-ac", nargs=1, action=appendkv, metavar="variable[=value],...")
