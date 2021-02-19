@@ -1,7 +1,7 @@
 import argparse
 from collections import defaultdict
 
-from uge2slurm.commands.argparser import set_common_args
+from uge2slurm.commands.argparser import set_common_args, parse_ge_datetime
 
 parser_args = dict(
     description="Mapping UGE qsub command to slurm",
@@ -13,7 +13,7 @@ class singlearg(argparse.Action):
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
         if nargs != 1:
             raise ValueError("`nargs` must be 1 for this action")
-        super().__init__(option_strings, dest, nargs=None, **kwargs)
+        super().__init__(option_strings, dest, nargs, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string):
         setattr(namespace, self.dest, values[0])
@@ -92,7 +92,7 @@ def _set_parser(parser):
 
 def set_qsub_arguments(uge):
     uge.add_argument("-@", nargs=1, action=singlearg, metavar="optionfile")
-    uge.add_argument("-a", nargs=1, action=singlearg, metavar="date_time")
+    uge.add_argument("-a", nargs=1, action=singlearg, metavar="date_time", type=parse_ge_datetime)
     uge.add_argument("-ac", nargs=1, action=appendkv, metavar="variable[=value],...")
     uge.add_argument("-adds", nargs=3, action="append", metavar="parameter key value")
     uge.add_argument("-ar", nargs=1, action=singlearg, metavar="ar_id")
@@ -108,8 +108,8 @@ def set_qsub_arguments(uge):
     uge.add_argument("-cwd", action="store_true", default=None)
     uge.add_argument("-C", nargs=1, action=singlearg, metavar="prefix_string")
     uge.add_argument("-dc", nargs=1, action=appendkv, metavar="variable,...")
-    uge.add_argument("-dl", nargs=1, action=singlearg, metavar="display_specifier")
-    uge.add_argument("-e", nargs=1, action=appendkv, metavar="date_time")
+    uge.add_argument("-dl", nargs=1, action=singlearg, metavar="date_time", type=parse_ge_datetime)
+    uge.add_argument("-e", nargs=1, action=appendkv, metavar="[[hostname]:]file,...")
     uge.add_argument("-hard", nargs=0, action=set_resource_state)
     uge.add_argument("-h", action="store_true", default=None)
     uge.add_argument("-help", action="store_true", default=None)

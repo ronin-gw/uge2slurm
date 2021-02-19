@@ -5,11 +5,11 @@ import logging
 from gettext import gettext
 
 from uge2slurm.utils.path import get_command_path
-from uge2slurm.mapper import CommandMapperBase
 from uge2slurm.utils.log import entrypoint
 from uge2slurm.commands import UGE2slurmCommandError
 
 from .argparser import get_parser, parser_args, set_qsub_arguments
+from .mapper import CommandMapper
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +53,8 @@ def run(args):
             script = _read_stdin()
             if not script:
                 raise UGE2slurmCommandError("no input read from stdin")
+            if args.N is None:
+                setattr(args, 'N', "STDIN")
     elif not args.b:
         with open(args.command[0]) as f:
             script = f.read()
