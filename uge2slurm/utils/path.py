@@ -1,9 +1,12 @@
 import os
 import sys
 import inspect
+import logging
 from shutil import _access_check
 
 from neotermcolor import cprint
+
+logger = logging.getLogger(__name__)
 
 _WIN_DEFAULT_PATHEXT = ".COM;.EXE;.BAT;.CMD;.VBS;.JS;.WS;.MSC"
 
@@ -83,11 +86,8 @@ def get_command_paths(cmd):
 def get_command_path(cmd):
     candidates = get_command_paths(cmd)
     if len(candidates) > 1:
-        cprint(
-            'Warning: "{}" command found at mutiple paths. Use 1st one anyway.'.format(cmd),
-            "yellow",
-            file=sys.stderr
-        )
+        logger.warning('Warning: "{}" command found at mutiple paths. '
+                       'Use 1st one anyway.'.format(cmd))
         cprint("\t{} -> {}".format(cmd, candidates), "yellow")
         return candidates[0]
     elif candidates:

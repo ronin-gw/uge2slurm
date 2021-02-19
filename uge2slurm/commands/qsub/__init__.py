@@ -1,15 +1,17 @@
 import sys
 import shlex
 import argparse
+import logging
 from gettext import gettext
-
-from neotermcolor import cprint
 
 from uge2slurm.utils.path import get_command_path
 from uge2slurm.mapper import CommandMapperBase
+from uge2slurm.utils.log import entrypoint
 from uge2slurm.commands import UGE2slurmCommandError
 
 from .argparser import get_parser, parser_args, set_qsub_arguments
+
+logger = logging.getLogger(__name__)
 
 
 class ArgumentParser(argparse.ArgumentParser):
@@ -22,14 +24,7 @@ class ArgumentParser(argparse.ArgumentParser):
         self.exit(2, self.error_prolog + '\n' + (gettext('%(prog)s: error: %(message)s\n') % args))
 
 
-class CommandMapper(CommandMapperBase):
-    def t(self, value):
-        self.args.append("--array=" + value)
-
-    def command(self, value):
-        self.args += value
-
-
+@entrypoint
 def main():
     parser = get_parser()
     args = parser.parse_args()
@@ -42,11 +37,11 @@ def run(args):
 
     binary = get_command_path(command_name)
     if not binary:
-        cprint("Error: command not found: " + command_name, "red", file=sys.stderr)
+        logger.error("Error: command not found: " + command_name)
         if not args.dry_run:
             sys.exit(1)
         else:
-            cprint("Continue dry run anyway.", "yellow", file=sys.stderr)
+            logger.warning("Continue dry run anyway.")
             binary = command_name
 
     #
