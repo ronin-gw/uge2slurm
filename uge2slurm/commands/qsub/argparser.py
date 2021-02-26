@@ -83,7 +83,7 @@ def _set_parser(parser):
     parser.add_argument("-n", "--dry-run", action="store_true",
                         help="Preview converted slurm command")
     parser.add_argument(
-        "--memory", nargs='*', default=["mem_req"], metavar="resource",
+        "--memory", nargs='*', default=["mem_req", "s_vmem"], metavar="resource",
         help="Specify which resource value should be mapped into `--mem-per-cpu` "
              "option. If multiple values are specified, the first valid value "
              "will be used."

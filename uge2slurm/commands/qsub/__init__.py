@@ -63,6 +63,7 @@ def run(args):
         _load_extra_args(args, script)
 
     converter = CommandMapper(command_name)
+    converter.dry_run = args.dry_run
 
     if args.dry_run:
         print(args)

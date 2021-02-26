@@ -1,9 +1,11 @@
 import logging
 import os
-from functools import partialmethod
+from functools import partialmethod, reduce
 
 from uge2slurm.mapper import CommandMapperBase, bind_to, bind_if_true, not_implemented, not_supported
 from uge2slurm.commands import UGE2slurmCommandError
+
+from .squeue import get_running_jobs
 
 logger = logging.getLogger()
 
@@ -16,6 +18,8 @@ class CommandMapper(CommandMapperBase):
         e=("END", ),
         a=("FAIL", "REQUEUE")
     )
+
+    dry_run = False
 
     def is_array(self):
         return self._args.t is not None
@@ -270,22 +274,35 @@ class CommandMapper(CommandMapperBase):
         self.args += self._args.command
 
     def _map_dependency(self):
-        # TODO: convert job name to job ID?
-        nonarray_dependencies = []
-        if self._args.hold_jid is not None:
-            for jobid in self._args.hold_jid:
-                if not jobid.isdigit():
-                    self._logger.error("Currently, only job ID is supported for job dependency specification.")
-                    raise UGE2slurmCommandError
-                nonarray_dependencies.append(jobid)
+        dependencies = set()
+        for ids in (self._args.hold_jid, self._args.hold_jid_ad):
+            if ids is not None:
+                dependencies |= set(jobid for jobid in ids if not jobid.isdigit())
 
+        if not dependencies:
+            return
+
+        try:
+            name2jobid = get_running_jobs()
+        except UGE2slurmCommandError:
+            if self.dry_run:
+                return
+            else:
+                raise
+        running_jids = reduce(lambda a, b: a.update(b), name2jobid.values())
+
+        nonarray_dependencies = []
         array_dependencies = []
-        if self._args.hold_jid_ad is not None:
-            for jobid in self._args.hold_jid_ad:
-                if not jobid.isdigit():
-                    self._logger.error("Currently, only job ID is supported for job dependency specification.")
-                    raise UGE2slurmCommandError
-                array_dependencies.append(jobid)
+        for container, jids in zip((nonarray_dependencies, array_dependencies),
+                                   (self._args.hold_jid, self._args.hold_jid_ad)):
+            if jids is not None:
+                for jobid in jids:
+                    if jobid in running_jids:
+                        container.append(jobid)
+                    elif jobid in name2jobid:
+                        container += [i for i in jobid[name2jobid]]
+                    else:
+                        self._logger.info('Job "{}" is not running.'.format(jobid))
 
         dependencies = []
         if nonarray_dependencies:
