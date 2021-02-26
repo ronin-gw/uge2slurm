@@ -80,7 +80,7 @@ class CommandMapper(CommandMapperBase):
     def a(self, datetime):
         self.args += ["--begin", datetime.isoformat()]
 
-    ac = not_implemented("-ac")
+    ac = not_supported("-ac")
     adds = not_implemented("-adds")
     ar = bind_to("--reservation")
     A = bind_to("--account")
@@ -90,8 +90,8 @@ class CommandMapper(CommandMapperBase):
         # TODO: use `--wrap` option?
         pass
 
-    c = not_implemented("-c")
-    ckpt = not_implemented("-ckpt")
+    c = not_supported("-c")
+    ckpt = not_supported("-ckpt")
     clear = not_implemented("-clear")
     clearp = not_implemented("-clearp")
     clears = not_implemented("-clears")
@@ -102,7 +102,7 @@ class CommandMapper(CommandMapperBase):
         self.args += ["--chdir", os.getcwd()]
 
     # C
-    dc = not_implemented("-dc")
+    dc = not_supported("-dc")
 
     def dl(self, datetime):
         self.args += ["--deadline", datetime.isoformat()]
@@ -116,15 +116,15 @@ class CommandMapper(CommandMapperBase):
     i = partialmethod(_map_path, option_name="-i", bind_to="--input", option_string='i', is_output=False)
     # handle `j` at pre_ and post_convert
     # j
-    jc = not_implemented("-jc")
-    js = not_implemented("-js")
-    jsv = not_implemented("-jsv")
-    masterl = not_implemented("-masterl")
+    jc = not_supported("-jc")
+    js = not_supported("-js")
+    jsv = not_supported("-jsv")
+    masterl = not_supported("-masterl")
 
     def l(self, value):
         # TODO: map resource request
 
-        #
+        # get hard/soft confs (None and "hard" are merged at `self.pre_convert`)
         hard_resources = self._make_dict_from_kv(value[None])
         soft_resources = self._make_dict_from_kv(value["soft"])
 
@@ -156,8 +156,8 @@ class CommandMapper(CommandMapperBase):
                                  'supported. use first one: {}'.format(user))
         self.args += ["--mail-user", user]
 
-    masterq = not_implemented("-masterq")
-    mod = not_implemented("-mod")
+    masterq = not_supported("-masterq")
+    mods = not_implemented("-mods")
     mbind = not_implemented("-mbind")
     notify = not_implemented("-notify")  # use `--signal`?
     now = not_implemented("-now")
@@ -221,11 +221,11 @@ class CommandMapper(CommandMapperBase):
         elif value is False:
             self.args.append("--no-requeue")
 
-    rou = not_implemented("-rou")
-    rdi = not_implemented("-rdi")
-    sc = not_implemented("-sc")
+    rou = not_implemented("-rou")  # map to `--profile`
+    rdi = not_supported("-rdi")
+    sc = not_supported("-sc")
     shell = not_implemented("-shell")
-    si = not_implemented("-si")
+    si = not_supported("-si")
     # soft
     sync = not_implemented("-sync")  # TODO: use `--wait`
 
@@ -238,11 +238,11 @@ class CommandMapper(CommandMapperBase):
     # tc
     tcon = not_supported("-tcon")
     terse = bind_if_true("--parsable")
-    umask = not_implemented("-umask")
+    umask = not_supported("-umask")
     # v: processed at post_convert
-    verify = not_supported("-verify")
+    verify = bind_if_true("--test-only")
     # V: processed at post_convert
-    w = not_implemented("-w")
+    w = not_supported("-w")
     wd = bind_to("--chdir")
     xd = not_supported("-xd")
     xdv = not_supported("-xdv")
