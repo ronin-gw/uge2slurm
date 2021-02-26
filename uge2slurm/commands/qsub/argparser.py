@@ -83,10 +83,17 @@ def _set_parser(parser):
     parser.add_argument("-n", "--dry-run", action="store_true",
                         help="Preview converted slurm command")
     parser.add_argument(
-        "--memory", nargs='*', default=["mem_req"], dest="resource",
+        "--memory", nargs='*', default=["mem_req"], metavar="resource",
         help="Specify which resource value should be mapped into `--mem-per-cpu` "
              "option. If multiple values are specified, the first valid value "
              "will be used."
+    )
+    parser.add_argument(
+        "--cpus", nargs='*', default=["def_slot"], metavar="parallel_env",
+        help="Specify which parallel_environment should be mapped into "
+             "`--cpus-per-task` option. If multiple values are specified, the "
+             "first valid value will be used. Note that range values are not "
+             "supported and its minimum value will be used as the number of cpus."
     )
 
     uge = parser.add_argument_group(

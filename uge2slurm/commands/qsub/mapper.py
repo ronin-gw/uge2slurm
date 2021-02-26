@@ -61,6 +61,16 @@ class CommandMapper(CommandMapperBase):
 
         self.args += [bind_to, path]
 
+    @staticmethod
+    def _make_dict_from_kv(values):
+        d = {}
+        for kv in values:
+            kv = kv.split('=', 1)
+            k = kv[0]
+            v = None if len(kv) == 1 else kv[1]
+            d[k] = v
+        return d
+
     _optionfile = not_implemented("-@")
 
     def a(self, datetime):
@@ -106,16 +116,6 @@ class CommandMapper(CommandMapperBase):
     js = not_implemented("-js")
     jsv = not_implemented("-jsv")
     masterl = not_implemented("-masterl")
-
-    @staticmethod
-    def _make_dict_from_kv(values):
-        d = {}
-        for kv in values:
-            kv = kv.split('=', 1)
-            k = kv[0]
-            v = None if len(kv) == 1 else kv[1]
-            d[k] = v
-        return d
 
     def l(self, value):
         # TODO: map resource request
@@ -164,9 +164,37 @@ class CommandMapper(CommandMapperBase):
     p = bind_to("--nice")
     par = not_implemented("-par")
 
-    def pe(self, vlaue):
+    def pe(self, value):
         # TODO: map resource request
-        pass
+
+        #
+        parallel_env = {}
+        for k, v in value:
+            ranges = tuple(sorted(
+                tuple((int(i) if i != '' else 0) for i in range.split('-'))
+                for range in v.split(',')
+            ))
+            parallel_env[k] = ranges
+
+        #
+        available_pe = None
+        for pe_name in self._args.cpus:
+            if pe_name in parallel_env:
+                if available_pe is None:
+                    pe = available_pe = parallel_env[pe_name]
+                else:
+                    pe = parallel_env[pe_name]
+                if len(pe) == 1 and len(pe[0]) == 1:
+                    self.args += ["--cpus-per-task", pe[0][0]]
+                    available_pe = None
+                    break
+
+        if available_pe is not None:
+            min_pe = pe[0][0]
+            if min_pe == 0:
+                min_pe = 1
+            self._logger.warning("Range value for `-pe` is not supported. Use minimum value: {}".format(min_pe))
+            self.args += ["--cpus-per-task", min_pe]
 
     pty = not_implemented("-pty")
 
@@ -282,7 +310,6 @@ class CommandMapper(CommandMapperBase):
             return
 
         array = self._args.t
-        print(array)
         if self._args.tc:
             array += '%' + self._args.tc
 
