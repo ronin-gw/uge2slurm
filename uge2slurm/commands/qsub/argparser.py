@@ -82,6 +82,12 @@ def _set_parser(parser):
     set_common_args(parser)
     parser.add_argument("-n", "--dry-run", action="store_true",
                         help="Preview converted slurm command")
+    parser.add_argument(
+        "--memory", nargs='*', default=["mem_req"], dest="resource",
+        help="Specify which resource value should be mapped into `--mem-per-cpu` "
+             "option. If multiple values are specified, the first valid value "
+             "will be used."
+    )
 
     uge = parser.add_argument_group(
         title="qsub options",

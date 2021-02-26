@@ -107,9 +107,28 @@ class CommandMapper(CommandMapperBase):
     jsv = not_implemented("-jsv")
     masterl = not_implemented("-masterl")
 
+    @staticmethod
+    def _make_dict_from_kv(values):
+        d = {}
+        for kv in values:
+            kv = kv.split('=', 1)
+            k = kv[0]
+            v = None if len(kv) == 1 else kv[1]
+            d[k] = v
+        return d
+
     def l(self, value):
         # TODO: map resource request
-        pass
+
+        #
+        hard_resources = self._make_dict_from_kv(value[None])
+        soft_resources = self._make_dict_from_kv(value["soft"])
+
+        #
+        for memkey in self._args.memory:
+            if memkey in hard_resources:
+                self.args += ["--mem-per-cpu", hard_resources[memkey]]
+                break
 
     def m(self, value):
         mailtypes = []
@@ -205,6 +224,14 @@ class CommandMapper(CommandMapperBase):
     def pre_convert(self):
         if self._args.j is True:
             setattr(self._args, 'e', None)
+
+        for d in (self._args.l, self._args.q):
+            self._merge_hard_env(d)
+
+    @staticmethod
+    def _merge_hard_env(d):
+        if d is not None and None in d and "hard" in d:
+            d["None"].update(**d["hard"])
 
     def post_convert(self):
         self._map_dependency()
