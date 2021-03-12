@@ -1,5 +1,7 @@
 import logging
 import os
+import pathlib
+import getpass
 from functools import partialmethod, reduce
 
 from uge2slurm.mapper import CommandMapperBase, bind_to, bind_if_true, not_implemented, not_supported
@@ -251,7 +253,11 @@ class CommandMapper(CommandMapperBase):
     def __init__(self, bin):
         super().__init__(bin)
 
+        #
         self.dest2converter['@'] = self._optionfile
+
+        #
+        self.env_vars = {}
 
     def pre_convert(self):
         if self._args.j is True:
@@ -269,6 +275,8 @@ class CommandMapper(CommandMapperBase):
         self._map_dependency()
         self._prepare_output_path()
         self._map_array()
+
+        self._convert_envvars()
         self._map_environ_vars()
 
         self.args += self._args.command
@@ -332,6 +340,69 @@ class CommandMapper(CommandMapperBase):
 
         self.args += ["--array", array]
 
+    def _convert_envvars(self):
+        envname2solver = {
+            "SGE_O_HOME": self._get_home,
+            "SGE_O_HOST": self._get_hostname,
+            "SGE_O_LOGNAME": self._get_username,
+            "SGE_O_MAIL": self._get_mail,
+            "SGE_O_PATH": self._get_path,
+            "SGE_O_SHELL": self._get_shell,
+            "SGE_O_WORKDIR": self._get_workdir,
+            "ENVIRONMENT": self._get_environment,
+            "HOME": self._get_home,
+            "JOB_SCRIPT": self._get_jobscript,
+            "LOGNAME": self._get_username,
+            "REQUEST": self._get_jobname,
+            "USER": self._get_username
+        }
+
+        for envname, solver in envname2solver.items():
+            val = solver()
+            if val is not None:
+                self.env_vars[envname] = val
+
+    @staticmethod
+    def _get_home():
+        return str(pathlib.Path.home())
+
+    @staticmethod
+    def _get_hostname():
+        return os.uname().nodename
+
+    @staticmethod
+    def _get_username():
+        return getpass.getuser()
+
+    @staticmethod
+    def _get_mail():
+        return os.environ.get("MAIL", None)
+
+    @staticmethod
+    def _get_path():
+        return os.environ.get("PATH", None)
+
+    @staticmethod
+    def _get_shell():
+        return os.environ.get("SHELL", None)
+
+    @staticmethod
+    def _get_workdir():
+        return os.getcwd()
+
+    @staticmethod
+    def _get_environment():
+        return "BATCH"
+
+    def _get_jobscript(self):
+        return self._args.command[0]
+
+    def _get_jobname(self):
+        if self._args.N:
+            return self._args.N
+        else:
+            return os.path.basename(self._get_jobscript)
+
     def _map_environ_vars(self):
         export = []
         if self._args.V is True:
@@ -339,6 +410,9 @@ class CommandMapper(CommandMapperBase):
 
         if self._args.v:
             export += self._args.v
+
+        for k, v in self.env_vars.items():
+            export.append("{}={}".format(k, v))
 
         if not export:
             export.append("NONE")
