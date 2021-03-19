@@ -16,16 +16,14 @@ def get_running_jobs():
         if not squeue:
             raise FileNotFoundError
         command[0] = squeue[0]
-        res = subprocess.run(command, capture_output=True, timeout=15, check=True,
-                             universal_newlines=True)
+        res = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                             timeout=15, check=True, universal_newlines=True)
     except FileNotFoundError:
-        logger.critical("Command `squeue` not found.")
-        raise UGE2slurmCommandError
+        raise UGE2slurmCommandError("Command `squeue` not found.")
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
-        logger.critical("Failed to execute `squeue` command.")
         if e.stderr:
             logger.error("squeue: " + e.stderr)
-        raise UGE2slurmCommandError
+        raise UGE2slurmCommandError("Failed to execute `squeue` command.")
 
     name2jobid = defaultdict(set)
     for line in res.stdout:

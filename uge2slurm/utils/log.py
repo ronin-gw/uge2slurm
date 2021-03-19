@@ -57,3 +57,15 @@ def entrypoint(logger):
 
         return _inner
     return _wrapper
+
+
+def print_command(command):
+    print(command[0])
+    i = 1
+    while i < len(command) - 1:
+        if command[i].startswith('-'):
+            print('\t', command[i], command[i + 1])
+            i += 2
+        else:
+            break
+    print('\t', *command[i:])

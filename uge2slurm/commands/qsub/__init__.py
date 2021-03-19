@@ -5,11 +5,12 @@ import logging
 from gettext import gettext
 
 from uge2slurm.utils.path import get_command_path
-from uge2slurm.utils.log import entrypoint
+from uge2slurm.utils.log import entrypoint, print_command
 from uge2slurm.commands import UGE2slurmCommandError
 
 from .argparser import get_parser, parser_args, set_qsub_arguments
 from .mapper import CommandMapper
+from .bypass import use_qsub_if_avail
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +27,14 @@ class ArgumentParser(argparse.ArgumentParser):
 
 @entrypoint(logger)
 def main():
+    #
+    executed = use_qsub_if_avail()
+    if executed:
+        return
+
+    #
     parser = get_parser()
     args = parser.parse_args()
-
     run(args)
 
 
@@ -66,9 +72,10 @@ def run(args):
     converter = CommandMapper(command_name)
     converter.dry_run = args.dry_run
 
+    command = converter.convert(args)
     if args.dry_run:
-        print(args)
-        print(converter.convert(args))
+        logger.debug(args)
+        print_command(command)
     else:
         # TODO: exec command
         raise NotImplementedError

@@ -79,6 +79,16 @@ class store_bool(singlearg):
 
 
 def _set_parser(parser):
+    set_orig_argsuments(parser)
+
+    uge = parser.add_argument_group(
+        title="qsub options",
+        description="UGE qsub options"
+    )
+    set_qsub_arguments(uge)
+
+
+def set_orig_argsuments(parser):
     set_common_args(parser)
     parser.add_argument("-n", "--dry-run", action="store_true",
                         help="Preview converted slurm command")
@@ -95,12 +105,6 @@ def _set_parser(parser):
              "first valid value will be used. Note that range values are not "
              "supported and its minimum value will be used as the number of cpus."
     )
-
-    uge = parser.add_argument_group(
-        title="qsub options",
-        description="UGE qsub options"
-    )
-    set_qsub_arguments(uge)
 
 
 def set_qsub_arguments(uge):
