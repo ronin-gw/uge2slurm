@@ -2,6 +2,7 @@ import logging
 
 from uge2slurm.utils.path import get_command_path
 from uge2slurm.utils.log import entrypoint, print_command
+from uge2slurm.utils.slurm import run_command
 from uge2slurm.commands import UGE2slurmCommandError
 
 from .argparser import get_parser, parser_args
@@ -45,7 +46,7 @@ def run(args):
         print_command(command)
         return
 
-    
+    run_command(None, command, stdout=None, stderr=None)
 
 
 def set_subperser(name, subparsers):
