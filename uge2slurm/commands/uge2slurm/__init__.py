@@ -1,3 +1,5 @@
+import logging
+
 from neotermcolor import cprint
 
 from ..argparser import get_top_parser
@@ -6,6 +8,8 @@ from uge2slurm import VERSION
 from uge2slurm.utils.path import get_command_paths
 from uge2slurm.utils.log import entrypoint
 from uge2slurm.commands.qsub import set_subperser
+
+logger = logging.getLogger(__name__)
 
 
 UGE_COMMAND_NAMES = (
@@ -65,7 +69,7 @@ SLURM_COMMAND_NAMES = (
 )
 
 
-@entrypoint
+@entrypoint(logger)
 def main():
     parser = get_top_parser()
 

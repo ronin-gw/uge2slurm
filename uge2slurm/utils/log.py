@@ -1,8 +1,11 @@
+import sys
 import logging
 from bisect import bisect
 from functools import wraps
 
 from neotermcolor import colored
+
+from uge2slurm import UGE2slurmError
 
 
 class ColorfulFormatter(logging.Formatter):
@@ -40,12 +43,18 @@ def _set_root_logger():
     # rl.setLevel(log_level)
 
 
-def entrypoint(func):
-    @wraps(func)
-    def _inner(*args, **kwargs):
-        try:
-            _set_root_logger()
-            return func(*args, **kwargs)
-        except KeyboardInterrupt:
-            pass
-    return _inner
+def entrypoint(logger):
+    def _wrapper(func):
+        @wraps(func)
+        def _inner(*args, **kwargs):
+            try:
+                _set_root_logger()
+                sys.exit(func(*args, **kwargs))
+            except KeyboardInterrupt:
+                sys.exit(130)
+            except UGE2slurmError as e:
+                logger.critical("Error: " + e.args[0])
+                sys.exit(1)
+
+        return _inner
+    return _wrapper

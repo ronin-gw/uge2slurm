@@ -24,7 +24,7 @@ class ArgumentParser(argparse.ArgumentParser):
         self.exit(2, self.error_prolog + '\n' + (gettext('%(prog)s: error: %(message)s\n') % args))
 
 
-@entrypoint
+@entrypoint(logger)
 def main():
     parser = get_parser()
     args = parser.parse_args()
@@ -37,10 +37,11 @@ def run(args):
 
     binary = get_command_path(command_name)
     if not binary:
-        logger.error("Error: command not found: " + command_name)
+        message = "command not found: " + command_name
         if not args.dry_run:
-            sys.exit(1)
+            raise UGE2slurmCommandError(message)
         else:
+            logger.error(message)
             logger.warning("Continue dry run anyway.")
             binary = command_name
 
