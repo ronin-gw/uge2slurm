@@ -28,7 +28,7 @@ class _set_logging_level(argparse.Action):
                 level = level.upper()
                 root_logger.setLevel(level)
             else:
-                raise
+                parser.error("Unknown logging level passed: '{}'".format(values))
 
 
 def set_common_args(parser):

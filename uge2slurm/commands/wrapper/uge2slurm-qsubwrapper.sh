@@ -71,4 +71,4 @@ if [ "${SLURM_RESTART_COUNT}" ]; then
 fi
 
 #
-"$@"
+srun "$@"

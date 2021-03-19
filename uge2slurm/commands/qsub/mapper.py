@@ -1,15 +1,34 @@
 import logging
+import argparse
 import os
 import pathlib
 import getpass
+import sys
+import shlex
+import random
+import string
+from gettext import gettext
 from functools import partialmethod, reduce
+from datetime import datetime
 
+from uge2slurm import UGE2slurmError
 from uge2slurm.mapper import CommandMapperBase, bind_to, bind_if_true, not_implemented, not_supported
-from uge2slurm.commands import UGE2slurmCommandError
+from uge2slurm.commands import UGE2slurmCommandError, WRAPPER_DIR
 
 from .squeue import get_running_jobs
+from .argparser import set_qsub_arguments
 
 logger = logging.getLogger()
+
+
+class _ExtraArgumentParser(argparse.ArgumentParser):
+    def __init__(self, *args, **kwargs):
+        kwargs["add_help"] = False
+        super().__init__(*args, **kwargs)
+
+    def error(self, message):
+        args = {'prog': self.prog, 'message': message}
+        self.exit(2, self.error_prolog + '\n' + (gettext('%(prog)s: error: %(message)s\n') % args))
 
 
 class CommandMapper(CommandMapperBase):
@@ -20,6 +39,8 @@ class CommandMapper(CommandMapperBase):
         e=("END", ),
         a=("FAIL", "REQUEUE")
     )
+
+    WRAPPER_PATH = os.path.join(WRAPPER_DIR, "uge2slurm-qsubwrapper.sh")
 
     dry_run = False
 
@@ -32,17 +53,26 @@ class CommandMapper(CommandMapperBase):
             filename += ".%a"
         return filename
 
-    def _map_path(self, _value, option_name, bind_to, option_string, is_output=True):
-        path = _value[0]
-        if len(_value) > 1:
-            self._logger.warning('setting multiple paths for "{}" option is not '
-                                 'supported. use first one: {}'.format(option_name, path))
+    @classmethod
+    def _use_1st_one(cls, value, option_name):
+        one = value[0]
+        if len(value) > 1:
+            cls._logger.warning('setting multiple paths for "{}" option is not '
+                                'supported. use first one: {}'.format(option_name, one))
+        return one
 
+    @classmethod
+    def _remove_host(cls, path, option_name):
         if path.startswith(':'):
             path = path.lstrip(':')
         elif ':' in path:
-            self._logger.warning('"hostname" specification in "{}" option is not supported.'.format(option_name))
+            cls._logger.warning('"hostname" specification in "{}" option is not supported.'.format(option_name))
             path = path.split(':', 1)[1]
+        return path
+
+    def _map_path(self, value, option_name, bind_to, option_string, is_output=True):
+        path = self._use_1st_one(value, option_name)
+        path = self._remove_host(path, option_name)
 
         if is_output:
             if os.path.isdir(path):
@@ -77,6 +107,7 @@ class CommandMapper(CommandMapperBase):
             d[k] = v
         return d
 
+    # # # option mappings # # #
     _optionfile = not_implemented("-@")
 
     def a(self, datetime):
@@ -87,11 +118,7 @@ class CommandMapper(CommandMapperBase):
     ar = bind_to("--reservation")
     A = bind_to("--account")
     binding = not_implemented("-binding")
-
-    def b(self, value):
-        # TODO: use `--wrap` option?
-        pass
-
+    # handle `b` at `run` function in `__init__`
     c = not_supported("-c")
     ckpt = not_supported("-ckpt")
     clear = not_implemented("-clear")
@@ -151,11 +178,8 @@ class CommandMapper(CommandMapperBase):
         if mailtypes:
             self.args += ["--mail-type", ','.join(mailtypes)]
 
-    def M(self, _value):
-        user = _value[0]
-        if len(_value) > 1:
-            self._logger.warning('setting multiple paths for "-M" option is not '
-                                 'supported. use first one: {}'.format(user))
+    def M(self, value):
+        user = self._use_1st_one(value, "-M")
         self.args += ["--mail-user", user]
 
     masterq = not_supported("-masterq")
@@ -232,8 +256,9 @@ class CommandMapper(CommandMapperBase):
     sync = not_implemented("-sync")  # TODO: use `--wait`
 
     def S(self, value):
-        # TODO: change shell
-        pass
+        path = self._use_1st_one(value, "-S")
+        path = self._remove_host(path, "-S")
+        setattr(self._args, 'S', path)
 
     # `t` and `tc` will be processed together
     # t
@@ -250,7 +275,9 @@ class CommandMapper(CommandMapperBase):
     xdv = not_supported("-xdv")
     xd_run_as_image_user = not_supported("-xd_run_as_image_user")
 
-    def __init__(self, bin):
+    # # # functions # # #
+    def __init__(self, bin, dry_run=False):
+        self.dry_run = dry_run
         super().__init__(bin)
 
         #
@@ -258,19 +285,72 @@ class CommandMapper(CommandMapperBase):
 
         #
         self.env_vars = {}
+        self.script = None
 
+    # # # pre-convert processing # # #
     def pre_convert(self):
+        #
+        self._load_script()
+
+        #
         if self._args.j is True:
             setattr(self._args, 'e', None)
 
         for d in (self._args.l, self._args.q):
             self._merge_hard_env(d)
 
+    def _load_script(self):
+        if not self._args.command:
+            if self._args.b:
+                raise UGE2slurmCommandError("command required for a binary job")
+            self.script = self._read_stdin()
+            if not self.script:
+                raise UGE2slurmCommandError("no input read from stdin")
+            if self._args.N is None:
+                setattr(self._args, 'N', "STDIN")
+        elif not self._args.b:
+            try:
+                with open(self._args.command[0]) as f:
+                    self.script = f.read()
+            except OSError as e:
+                self._logger.error('Failed to open script "{}"'.format(self._args.command[0]))
+                raise UGE2slurmCommandError(str(e))
+
+        if self.script:
+            self._load_extra_args()
+
+    @staticmethod
+    def _read_stdin():
+        if sys.stdin.isatty():
+            return
+        return sys.stdin.read()
+
+    def _load_extra_args(self):
+        prefix_string = "#$" if self._args.C is None else self._args.C
+        if not prefix_string:
+            return
+
+        args_in_script = []
+        for line in self.script.split('\n'):
+            if line.startswith(prefix_string):
+                args_in_script.append(line[2:].strip())
+        args_in_script = ' '.join(args_in_script)
+
+        parser = _ExtraArgumentParser()
+        parser.error_prolog = "Invalid argument in the script"
+        set_qsub_arguments(parser)
+        extra_args = parser.parse_args(shlex.split(args_in_script))
+
+        for dest, value in vars(extra_args).items():
+            if getattr(self._args, dest) is None:
+                setattr(self._args, dest, value)
+
     @staticmethod
     def _merge_hard_env(d):
         if d is not None and None in d and "hard" in d:
             d["None"].update(**d["hard"])
 
+    # # # post-convert processing # # #
     def post_convert(self):
         self._map_dependency()
         self._prepare_output_path()
@@ -279,7 +359,9 @@ class CommandMapper(CommandMapperBase):
         self._convert_envvars()
         self._map_environ_vars()
 
-        self.args += self._args.command
+        self._set_wrapper()
+        self._set_interpreter()
+        self._set_script()
 
     def _map_dependency(self):
         dependencies = set()
@@ -401,7 +483,7 @@ class CommandMapper(CommandMapperBase):
         if self._args.N:
             return self._args.N
         else:
-            return os.path.basename(self._get_jobscript)
+            return os.path.basename(self._get_jobscript())
 
     def _map_environ_vars(self):
         export = []
@@ -418,3 +500,64 @@ class CommandMapper(CommandMapperBase):
             export.append("NONE")
 
         self.args += ["--export", ','.join(export)]
+
+    def _set_wrapper(self):
+        if not os.path.exists(self.WRAPPER_PATH):
+            raise UGE2slurmError('"uge2slurm-wrapper" is not found. Make sure uge2slurm '
+                                 'has been installed correctly and "uge2slurm-wrapper" '
+                                 'exists in your path.')
+        self.args.append(self.WRAPPER_PATH)
+
+    def _set_interpreter(self):
+        if self._args.b:
+            return
+
+        interpreter = self._args.S
+        if interpreter is not None:
+            self.args.append(interpreter)
+        else:
+            self._logger.warning("Warning: interpreter for given script is not specified by `-S` option.")
+            shebang = self._catch_shebang(self.script)
+            if shebang is not None:
+                self.args += shebang
+            else:
+                self._logger.warning("use `/bin/sh` anyway.")
+                self.args.append("/bin/sh")
+
+    def _catch_shebang(self):
+        head = self.script.split('\n')[0]
+        if head.startswith('#!'):
+            shebang = shlex.split(head[2:])
+            if os.path.exists(shebang[0]):
+                self._logger.warning("use `{}` as interpreter".format(' '.join(shebang)))
+                return shebang
+
+    def _set_script(self):
+        if self._args.command:
+            self.args += self._args.command
+        else:
+            # input script was read from stdin
+            temp_script_path = self._write_script()
+            self._logger.warning('Write to "{}" for stdin script'.format(temp_script_path))
+            self.args.append(temp_script_path)
+
+    def _write_script(self):
+        prefix = os.path.join(pathlib.Path.home(), "uge2slurm-")
+        now = None
+        population = string.ascii_letters + string.digits
+
+        while True:
+            _now = datetime.now()
+            if now is None or now.second != _now.second:
+                now = _now
+                path = prefix + now.strftime("%Y%m%d%H%M%S")
+            else:
+                path = prefix + now.strftime("%Y%m%d%H%M%S") + '-' + ''.join(
+                    random.choices(population, k=3)
+                )
+            try:
+                with open(path, 'x') as f:
+                    f.write(self.script)
+                return path
+            except FileExistsError:
+                continue

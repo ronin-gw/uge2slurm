@@ -39,5 +39,9 @@ setup(
             "uge2slurm = uge2slurm.commands.uge2slurm:main",
             "qsub = uge2slurm.commands.qsub:main"
         ]
+    },
+    package_dir={"uge2slurm.commands": "uge2slurm/commands"},
+    package_data={
+        "uge2slurm.commands": ["wrapper/*.sh"]
     }
 )

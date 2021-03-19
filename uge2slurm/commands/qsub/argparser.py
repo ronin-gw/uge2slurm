@@ -46,7 +46,9 @@ class appendsingle(argparse.Action):
 class nargs1or2(argparse.Action):
     def __call__(self, parser, namespace, values, option_string):
         if not 1 <= len(values) <= 2:
-            raise argparse.ArgumentTypeError('argument {}: expected 1 or 2 arguments'.format(self.dest))
+            parser.error(
+                'argument {}: expected 1 or 2 arguments'.format(self.dest)
+            )
         setattr(namespace, self.dest, values)
 
 
@@ -75,7 +77,9 @@ class store_bool(singlearg):
         elif value.startswith(('N', 'n')):
             setattr(namespace, self.dest, False)
         else:
-            raise argparse.ArgumentError('Unknown argument passed: "{}" (expect y[es] or n[o])'.format(value))
+            parser.error(
+                'Unknown argument passed: "{}" (expect y[es] or n[o])'.format(value)
+            )
 
 
 def _set_parser(parser):
