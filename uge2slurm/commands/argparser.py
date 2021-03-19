@@ -2,8 +2,6 @@ import argparse
 import datetime
 import logging
 
-import neotermcolor
-
 import uge2slurm
 
 from . import UGE2slurmCommandError
@@ -11,7 +9,7 @@ from . import UGE2slurmCommandError
 
 class _disablecoloring(argparse.Action):
     def __call__(self, parser, namespace, values, option_string):
-        neotermcolor._isatty = False
+        uge2slurm.utils.color._isatty = False
 
 
 class _set_logging_level(argparse.Action):

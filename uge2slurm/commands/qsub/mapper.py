@@ -1,18 +1,17 @@
 import logging
 import argparse
 import os
-import pathlib
 import getpass
 import sys
 import shlex
 import random
 import string
 from gettext import gettext
-from functools import partialmethod, reduce
+from functools import reduce
 from datetime import datetime
 
 from uge2slurm import UGE2slurmError
-from uge2slurm.mapper import CommandMapperBase, bind_to, bind_if_true, not_implemented, not_supported
+from uge2slurm.mapper import CommandMapperBase, bind_to, bind_if_true, not_implemented, not_supported, partialmethod
 from uge2slurm.commands import UGE2slurmCommandError, WRAPPER_DIR
 
 from .squeue import get_running_jobs
@@ -40,6 +39,7 @@ class CommandMapper(CommandMapperBase):
         e=("END", ),
         a=("FAIL", "REQUEUE")
     )
+    _HOME = os.path.expanduser('~')
 
     WRAPPER_PATH = os.path.join(WRAPPER_DIR, "uge2slurm-qsubwrapper.sh")
 
@@ -474,9 +474,9 @@ class CommandMapper(CommandMapperBase):
             if val is not None:
                 self.env_vars[envname] = val
 
-    @staticmethod
-    def _get_home():
-        return str(pathlib.Path.home())
+    @classmethod
+    def _get_home(cls):
+        return str(cls._HOME)
 
     @staticmethod
     def _get_hostname():
@@ -572,7 +572,7 @@ class CommandMapper(CommandMapperBase):
             self.args.append(temp_script_path)
 
     def _write_script(self):
-        prefix = os.path.join(pathlib.Path.home(), "uge2slurm-")
+        prefix = os.path.join(self._HOME, "uge2slurm-")
         now = None
         population = string.ascii_letters + string.digits
 
@@ -583,11 +583,11 @@ class CommandMapper(CommandMapperBase):
                 path = prefix + now.strftime("%Y%m%d%H%M%S")
             else:
                 path = prefix + now.strftime("%Y%m%d%H%M%S") + '-' + ''.join(
-                    random.choices(population, k=3)
+                    random.choice(population) for _ in range(3)
                 )
             try:
                 with open(path, 'x') as f:
                     f.write(self.script)
                 return path
-            except FileExistsError:
+            except OSError:
                 continue

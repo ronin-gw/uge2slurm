@@ -1,11 +1,12 @@
+from __future__ import print_function
+
 import sys
 import logging
 from bisect import bisect
 from functools import wraps
 
-from neotermcolor import colored
-
 from uge2slurm import UGE2slurmError, NAME
+from uge2slurm.utils.color import colored
 
 
 class ColorfulFormatter(logging.Formatter):

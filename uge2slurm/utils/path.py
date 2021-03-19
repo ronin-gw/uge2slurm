@@ -4,13 +4,31 @@ import inspect
 import logging
 from shutil import _access_check
 
-from neotermcolor import cprint
+from uge2slurm.utils.color import cprint
 
 logger = logging.getLogger(__name__)
 
 _WIN_DEFAULT_PATHEXT = ".COM;.EXE;.BAT;.CMD;.VBS;.JS;.WS;.MSC"
 
 BIN_DIRECTORY = os.path.dirname(inspect.stack()[-1].filename)
+
+try:
+    from os import fsencode, fsdecode  # novermin
+except ImportError:
+    _encoding = sys.getfilesystemencoding()
+
+    def fsencode(filename):
+        if isinstance(filename, str):
+            return filename.encode(_encoding)
+        else:
+            return filename
+
+    def fsdecode(filename):
+        if isinstance(filename, bytes):
+            return filename.decode(_encoding)
+        else:
+            return filename
+
 
 
 def _get_command_paths(cmd, mode=os.F_OK | os.X_OK):
@@ -29,16 +47,16 @@ def _get_command_paths(cmd, mode=os.F_OK | os.X_OK):
     use_bytes = isinstance(cmd, bytes)
 
     if use_bytes:
-        path = os.fsencode(path)
-        path = path.split(os.fsencode(os.pathsep))
+        path = fsencode(path)
+        path = path.split(fsencode(os.pathsep))
     else:
-        path = os.fsdecode(path)
+        path = fsdecode(path)
         path = path.split(os.pathsep)
 
     if sys.platform == "win32":
         curdir = os.curdir
         if use_bytes:
-            curdir = os.fsencode(curdir)
+            curdir = fsencode(curdir)
         if curdir not in path:
             path.insert(0, curdir)
 
@@ -46,7 +64,7 @@ def _get_command_paths(cmd, mode=os.F_OK | os.X_OK):
         pathext = [ext for ext in pathext_source.split(os.pathsep) if ext]
 
         if use_bytes:
-            pathext = [os.fsencode(ext) for ext in pathext]
+            pathext = [fsencode(ext) for ext in pathext]
         if any(cmd.lower().endswith(ext.lower()) for ext in pathext):
             files = [cmd]
         else:

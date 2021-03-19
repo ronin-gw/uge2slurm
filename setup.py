@@ -1,11 +1,12 @@
 from setuptools import setup, find_packages
-import pathlib
+import os.path
 
 from uge2slurm import NAME, VERSION, DESCRIPTION
 
-here = pathlib.Path(__file__).parent.resolve()
+here = os.path.dirname(os.path.abspath(__file__))
 
-long_description = (here / "README.md").read_text(encoding="utf-8")
+with open(os.path.join(here, "README.md")) as f:
+    long_description = f.read()
 
 setup(
     name=NAME,
@@ -23,17 +24,21 @@ setup(
         "Topic :: System :: Distributed Computing"
         "License :: OSI Approved :: MIT License",
         "Operating System :: POSIX",
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.2",
+        "Programming Language :: Python :: 3.3",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3 :: Only"
+        "Programming Language :: Python :: 3.9"
     ],
     keywords="SGE, UGE, Slurm",
     packages=find_packages(),
-    python_requires=">=3.6, <4",
-    install_requires=["neotermcolor"],
+    python_requires=">=2.7, >=3.2, <4",
     entry_points={
         "console_scripts": [
             "uge2slurm = uge2slurm.commands.uge2slurm:main",

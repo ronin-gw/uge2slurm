@@ -1,9 +1,12 @@
+from __future__ import print_function
+
 import argparse
 import subprocess
 import logging
 
 from uge2slurm.utils.path import get_command_path
 from uge2slurm.utils.log import print_command
+from uge2slurm.utils.slurm import run
 from uge2slurm.commands import UGE2slurmCommandError
 
 from .argparser import set_orig_argsuments
@@ -29,9 +32,9 @@ def use_qsub_if_avail():
         return True
 
     try:
-        res = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                             check=True, universal_newlines=True)
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+        res = run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                  check=True, universal_newlines=True)
+    except subprocess.CalledProcessError as e:
         if e.stderr:
             logger.error("squeue: " + e.stderr)
         raise UGE2slurmCommandError("Failed to execute `squeue` command.")

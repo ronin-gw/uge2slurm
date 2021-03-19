@@ -1,12 +1,13 @@
-import logging
+from __future__ import print_function
 
-from neotermcolor import cprint
+import logging
 
 from ..argparser import get_top_parser
 
 from uge2slurm import VERSION
 from uge2slurm.utils.path import get_command_paths
 from uge2slurm.utils.log import entrypoint
+from uge2slurm.utils.color import cprint
 from uge2slurm.commands.qsub import set_subperser
 
 logger = logging.getLogger(__name__)
