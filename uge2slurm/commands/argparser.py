@@ -1,23 +1,47 @@
 import argparse
 import datetime
+import logging
 
 import neotermcolor
 
 import uge2slurm
+
 from . import UGE2slurmCommandError
 
 
-class disablecoloring(argparse.Action):
+class _disablecoloring(argparse.Action):
     def __call__(self, parser, namespace, values, option_string):
         neotermcolor._isatty = False
+
+
+class _set_logging_level(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string):
+        root_logger = logging.getLogger(uge2slurm.NAME)
+        level = values
+        if isinstance(level, str) and level.isdigit():
+            level = int(level)
+
+        try:
+            root_logger.setLevel(level)
+        except ValueError:
+            if isinstance(level, str):
+                level = level.upper()
+                root_logger.setLevel(level)
+            else:
+                raise
 
 
 def set_common_args(parser):
     parser.add_argument("-?", "--help", action="help",
                         help="show this help message and exit")
     parser.add_argument("--version", action="version", version=uge2slurm.VERSION)
-    parser.add_argument("--ignore-coloring", nargs=0, action=disablecoloring,
+    parser.add_argument("--ignore-coloring", nargs=0, action=_disablecoloring,
                         help="disable coloring output")
+    parser.add_argument("--verbose", nargs='?', default=logging.getLogger().level,
+                        const=logging.INFO, action=_set_logging_level,
+                        metavar='{"critical"|"fatal","error","warn"|"warning","info","debug",int}',
+                        help='Set logging level. Default is "warning". If only '
+                             '`--verbose` is given, level is set to "info".')
 
 
 def get_top_parser():

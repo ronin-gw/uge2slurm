@@ -5,7 +5,7 @@ from functools import wraps
 
 from neotermcolor import colored
 
-from uge2slurm import UGE2slurmError
+from uge2slurm import UGE2slurmError, NAME
 
 
 class ColorfulFormatter(logging.Formatter):
@@ -34,13 +34,12 @@ class ColorfulFormatter(logging.Formatter):
 
 
 def _set_root_logger():
-    rl = logging.getLogger('')
+    rl = logging.getLogger(NAME)
 
     h = logging.StreamHandler()
     h.setFormatter(ColorfulFormatter())
 
     rl.addHandler(h)
-    # rl.setLevel(log_level)
 
 
 def entrypoint(logger):
