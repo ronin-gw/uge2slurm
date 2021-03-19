@@ -16,6 +16,7 @@ from uge2slurm.mapper import CommandMapperBase, bind_to, bind_if_true, not_imple
 from uge2slurm.commands import UGE2slurmCommandError, WRAPPER_DIR
 
 from .squeue import get_running_jobs
+from .sinfo import get_partitions
 from .argparser import set_qsub_arguments
 
 logger = logging.getLogger()
@@ -156,6 +157,35 @@ class CommandMapper(CommandMapperBase):
         # get hard/soft confs (None and "hard" are merged at `self.pre_convert`)
         hard_resources = self._make_dict_from_kv(value[None])
         soft_resources = self._make_dict_from_kv(value["soft"])
+
+        #
+        try:
+            partitions = get_partitions()
+        except UGE2slurmCommandError:
+            if self.dry_run:
+                partitions = set()
+            else:
+                raise
+
+        #
+        specified_part = []
+        for resource_name in hard_resources:
+            specified_part += [(resource_name, p) for p in partitions if p.startswith(resource_name)]
+
+        if len(specified_part) > 1:
+            self._logger.error("Resource specification(s) matches multiple partitions.")
+            for resource_name, partition in specified_part:
+                self._logger.warning("\t{} -> {}".fprmat(resource_name, partition))
+            raise UGE2slurmCommandError("failed to map resource into partition.")
+        elif len(specified_part) == 1:
+            self.args += ["--partition", specified_part[0][1]]
+
+        #
+        if not specified_part:
+            for resource_name in soft_resources:
+                specified_part += [(resource_name, p) for p in partitions if p.startswith(resource_name)]
+        if specified_part:
+            self.args += ["--partition", ','.join(p for _, p in specified_part)]
 
         #
         for memkey in self._args.memory:
