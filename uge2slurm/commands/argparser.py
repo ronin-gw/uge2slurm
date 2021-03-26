@@ -3,7 +3,6 @@ from __future__ import absolute_import
 import argparse
 import datetime
 import logging
-import re
 
 import uge2slurm
 

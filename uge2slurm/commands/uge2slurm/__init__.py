@@ -76,8 +76,14 @@ def main():
     subparsers = parser.add_subparsers()
     set_subperser("qsub", subparsers)
 
-    args = parser.parse_args()
-    if args.func:
+    args = None
+    try:
+        args = parser.parse_args()
+    except BaseException:
+        # python2 compatibility: assume subperser was not specified.
+        pass
+
+    if args is not None and args.func:
         return args.func(args)
     else:
         print(parser.prog, VERSION)
