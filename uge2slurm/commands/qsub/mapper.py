@@ -447,7 +447,7 @@ class CommandMapper(CommandMapperBase):
 
         if temp_script_required:
             temp_script_path = self._write_script()
-            self._logger.warning('Write stdin script to "{}"'.format(temp_script_path))
+            self._logger.warning('Write temporary script to "{}"'.format(temp_script_path))
             self.jobscript_path = temp_script_path
             setattr(self._args, "command", [])
 
