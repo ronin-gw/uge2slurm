@@ -18,6 +18,7 @@ def run_command(command_name, args, stdout=PIPE, stderr=PIPE):
         if not binary:
             raise OSError
         command = [binary] + args
+        logger.debug("Run command: {}".format(command))
         return run(command, stdout=stdout, stderr=stderr, check=True,
                    universal_newlines=True)
     except OSError:

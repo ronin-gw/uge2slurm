@@ -84,9 +84,15 @@ class CommandMapper(CommandMapperBase):
                 self._logger.warning('output file specified by "{}" will be overwritten.'.format(option_name))
             else:
                 dirname, filename = os.path.split(path)
-                if not os.path.exists(dirname):
-                    # try:
-                    os.makedirs(dirname)
+                if dirname and not os.path.exists(dirname):
+                    self._logger.info("output log directory does not exist.")
+                    if not self.dry_run:
+                        try:
+                            os.makedirs(dirname)
+                        except OSError as e:
+                            logger.critical(e)
+                            raise UGE2slurmCommandError("failed to create log output directory.")
+                        self._logger.info('directory "{}" was created.'.format(dirname))
 
                 filename = filename.replace('%', "%%")
                 filename = filename.replace("$USER", "%u")
