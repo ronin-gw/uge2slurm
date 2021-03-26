@@ -111,6 +111,12 @@ def set_orig_argsuments(parser):
              "first valid value will be used. Note that range values are not "
              "supported and its minimum value will be used as the number of cpus."
     )
+    parser.add_argument(
+        "--partition", nargs='*', metavar="resource=partition", default=[],
+        help="Specify which resource name should be mapped into partition "
+             "(queue) via `--partition` option. Resource-partition pairs must be "
+             "specified by '=' separated strings."
+    )
 
 
 def set_qsub_arguments(uge):

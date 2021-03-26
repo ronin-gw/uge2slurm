@@ -6,8 +6,10 @@ import sys
 import shlex
 import random
 import string
+import re
 from gettext import gettext
 from datetime import datetime
+from collections import defaultdict
 from functools import reduce
 from uge2slurm.utils.py2.functools import partialmethod
 
@@ -164,7 +166,7 @@ class CommandMapper(CommandMapperBase):
     jsv = not_supported("-jsv")
     masterl = not_supported("-masterl")
 
-    def l(self, value):
+    def l(self, value):  # noqa
         additional_args = []
 
         # get hard/soft confs (None and "hard" are merged at `self.pre_convert`)
@@ -172,33 +174,7 @@ class CommandMapper(CommandMapperBase):
         soft_resources = self._make_dict_from_kv(value["soft"])
 
         #
-        try:
-            partitions = get_partitions()
-        except UGE2slurmCommandError:
-            if self.dry_run:
-                partitions = set()
-            else:
-                raise
-
-        #
-        specified_part = []
-        for resource_name in hard_resources:
-            specified_part += [(resource_name, p) for p in partitions if p.startswith(resource_name)]
-
-        if len(specified_part) > 1:
-            self._logger.error("Resource specification(s) matches multiple partitions.")
-            for resource_name, partition in specified_part:
-                self._logger.warning("\t{} -> {}".fprmat(resource_name, partition))
-            raise UGE2slurmCommandError("failed to map resource into partition.")
-        elif len(specified_part) == 1:
-            additional_args += ["--partition", specified_part[0][1]]
-
-        #
-        if not specified_part:
-            for resource_name in soft_resources:
-                specified_part += [(resource_name, p) for p in partitions if p.startswith(resource_name)]
-        if specified_part:
-            additional_args += ["--partition", ','.join(p for _, p in specified_part)]
+        additional_args += self._map_partition(hard_resources, soft_resources)
 
         #
         for memkey in self._args.memory:
@@ -207,6 +183,98 @@ class CommandMapper(CommandMapperBase):
                 break
 
         return additional_args
+
+    def _map_partition(self, hard_resources, soft_resources):
+        #
+        try:
+            partitions = get_partitions()
+        except UGE2slurmCommandError as e:
+            if self.dry_run:
+                self._logger.warning(e)
+                partitions = set()
+            else:
+                raise e
+
+        #
+        resource2part = {}
+        for kv in self._args.partition:
+            k, v = kv.split('=', 1)
+            resource2part[k] = v
+
+        prefix2partition = [
+            (p, re.split(r"[!\"#$%&'()*+,./:;<=>?@\[\\\]^`{|}~]", p, maxsplit=1)[0])
+            for p in partitions
+        ]
+
+        def _map_resource_to_partition(resource_name):
+            #
+            if resource_name in resource2part:
+                return resource2part[resource_name]
+
+            # Split by punctuation charas exclude [-_] then try complete match.
+            hits = []
+            for partition, prefix in prefix2partition:
+                if resource_name == prefix:
+                    hits.append(partition)
+            if not hits:
+                # Try forward-matching
+                for partition in partitions:
+                    if partition.startswith(resource_name):
+                        hits.append(partition)
+
+            if len(hits) > 1:
+                self._logger.error('Resource specification "{}" matches multiple partitions.'.format(resource_name))
+                self._logger.warning("\t{} -> ".format(resource_name) + ", ".join(hits))
+                self._logger.warning("Try to add implicit mapping option like `--partition {}={}`.".format(
+                    resource_name, hits[0]
+                ))
+                raise UGE2slurmCommandError("failed to map resource into partition.")
+            elif hits:
+                self._logger.debug("partition mapping: {} -> {}".format(resource_name, hits[0]))
+                return hits[0]
+            else:
+                return None
+
+        #
+        specified_part = []
+        for resource_name in hard_resources:
+            candidate = _map_resource_to_partition(resource_name)
+            if candidate:
+                specified_part.append((resource_name, candidate))
+
+        candidates = set(partition for _, partition in specified_part)
+        if len(candidates) > 1:
+            self._logger.error("Hard resource specifications match multiple partitions.")
+            for resource_name, partition in specified_part:
+                self._logger.warning("\t{} -> {}".fprmat(resource_name, partition))
+            self._logger.warning('Try to specify single resource or use `-soft` '
+                                 'to give "as available" resource list.')
+            raise UGE2slurmCommandError("failed to map resource into partition.")
+        elif candidates:
+            partition = candidates.pop()
+            self._logger.info("set partition by hard resource {} -> {}".format(
+                ", ".join(resource_name for resource_name, _ in specified_part),
+                partition
+            ))
+            return ["--partition", partition]
+
+        #
+        partition2resource_names = defaultdict(list)
+        for resource_name in soft_resources:
+            candidate = _map_resource_to_partition(resource_name)
+            if candidate:
+                partition2resource_names[candidate].append(resource_name)
+
+        if partition2resource_names:
+            self._logger.info("set partition by soft resource")
+            for partition, resource_names in specified_part:
+                self._logger.info("\t{} -> {}".format(
+                    ", ".join(resource_names),
+                    partition
+                ))
+            return ["--partition", ','.join(p for p in partition2resource_names)]
+
+        return []
 
     def m(self, value):
         mailtypes = []
