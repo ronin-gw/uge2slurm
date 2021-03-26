@@ -1,5 +1,5 @@
 import logging
-from functools import wraps
+from functools import wraps, partial
 
 
 class CommandMapperBase(object):
@@ -9,6 +9,10 @@ class CommandMapperBase(object):
         self.bin = bin
         self.args = []
         self.dest2converter = {}
+
+    @classmethod
+    def _get_unbound_method(cls, dest):
+        return getattr(cls, dest, None)
 
     def convert(self, namespace):
         self._args = namespace
@@ -20,11 +24,11 @@ class CommandMapperBase(object):
             if value is None:
                 continue
 
-            converter = self.dest2converter.get(dest, getattr(self, dest, None))
-            if not callable(converter):
+            converter = self.dest2converter.get(dest, self._get_unbound_method(dest))
+            if not callable(converter) and not isinstance(converter, partial):
                 continue
 
-            mapmethod(dest)(converter)
+            mapmethod(dest)(converter)(self)
 
         self.post_convert()
 
@@ -73,7 +77,6 @@ def mapmethod(*target_args):
 
             if args is not None:
                 values += args
-
             additional_args = func(self, *values, **kwargs)
 
             input_repr = ", ".join("-{} {}".format(k, v) for k, v in zip(target_args, values))

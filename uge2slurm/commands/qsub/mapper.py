@@ -329,6 +329,8 @@ class CommandMapper(CommandMapperBase):
 
         #
         if self._args.j is True:
+            if self._args.e is not None:
+                self._logger.warning("`-e` is ignored due to `-j` is enabled.")
             setattr(self._args, 'e', None)
 
         for d in (self._args.l, self._args.q):
