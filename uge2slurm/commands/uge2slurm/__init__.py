@@ -1,17 +1,16 @@
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 import logging
-
-from ..argparser import get_top_parser
 
 from uge2slurm import VERSION
 from uge2slurm.utils.path import get_command_paths
 from uge2slurm.utils.log import entrypoint
 from uge2slurm.utils.color import cprint
-from uge2slurm.commands.qsub import set_subperser
+
+from ..qsub import set_subperser
+from ..argparser import get_top_parser
 
 logger = logging.getLogger(__name__)
-
 
 UGE_COMMAND_NAMES = (
     "qacct",

@@ -38,7 +38,7 @@ setup(
     ],
     keywords="SGE, UGE, Slurm",
     packages=find_packages(),
-    python_requires=">=2.7, >=3.2, <4",
+    python_requires=">=2.7, !=3.0, !=3.1, <4",
     entry_points={
         "console_scripts": [
             "uge2slurm = uge2slurm.commands.uge2slurm:main",

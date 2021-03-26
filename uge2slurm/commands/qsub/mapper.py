@@ -7,11 +7,12 @@ import shlex
 import random
 import string
 from gettext import gettext
-from functools import reduce
 from datetime import datetime
+from functools import reduce
+from uge2slurm.utils.py2.functools import partialmethod
 
 from uge2slurm import UGE2slurmError
-from uge2slurm.mapper import CommandMapperBase, bind_to, bind_if_true, not_implemented, not_supported, partialmethod
+from uge2slurm.mapper import CommandMapperBase, bind_to, bind_if_true, not_implemented, not_supported, mapmethod
 from uge2slurm.commands import UGE2slurmCommandError, WRAPPER_DIR
 
 from .squeue import get_running_jobs
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 class _ExtraArgumentParser(argparse.ArgumentParser):
     def __init__(self, *args, **kwargs):
         kwargs["add_help"] = False
-        super().__init__(*args, **kwargs)
+        super(_ExtraArgumentParser, self).__init__(*args, **kwargs)
 
     def error(self, message):
         args = {'prog': self.prog, 'message': message}
@@ -312,7 +313,7 @@ class CommandMapper(CommandMapperBase):
     # # # functions # # #
     def __init__(self, bin, dry_run=False):
         self.dry_run = dry_run
-        super().__init__(bin)
+        super(CommandMapper, self).__init__(bin)
 
         #
         self.dest2converter['@'] = self._optionfile
@@ -491,7 +492,7 @@ class CommandMapper(CommandMapperBase):
 
     @staticmethod
     def _get_hostname():
-        return os.uname().nodename
+        return os.uname()[1]  # nodename
 
     @staticmethod
     def _get_username():

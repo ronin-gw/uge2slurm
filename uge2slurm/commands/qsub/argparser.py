@@ -2,10 +2,12 @@ import argparse
 from collections import defaultdict
 
 from uge2slurm.commands.argparser import set_common_args, parse_ge_datetime
+from uge2slurm.utils.py2.argparse import HelpFormatter
 
 parser_args = dict(
     description="Mapping UGE qsub command to slurm",
-    add_help=False
+    add_help=False,
+    formatter_class=HelpFormatter
 )
 
 
@@ -13,7 +15,7 @@ class singlearg(argparse.Action):
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
         if nargs != 1:
             raise ValueError("`nargs` must be 1 for this action")
-        super().__init__(option_strings, dest, nargs, **kwargs)
+        super(singlearg, self).__init__(option_strings, dest, nargs, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string):
         setattr(namespace, self.dest, values[0])

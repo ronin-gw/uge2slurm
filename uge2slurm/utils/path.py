@@ -2,33 +2,15 @@ import os
 import sys
 import inspect
 import logging
-from shutil import _access_check
 
+from uge2slurm.utils.py2.os import fsencode, fsdecode, access_check
 from uge2slurm.utils.color import cprint
 
 logger = logging.getLogger(__name__)
 
 _WIN_DEFAULT_PATHEXT = ".COM;.EXE;.BAT;.CMD;.VBS;.JS;.WS;.MSC"
 
-BIN_DIRECTORY = os.path.dirname(inspect.stack()[-1].filename)
-
-try:
-    from os import fsencode, fsdecode  # novermin
-except ImportError:
-    _encoding = sys.getfilesystemencoding()
-
-    def fsencode(filename):
-        if isinstance(filename, str):
-            return filename.encode(_encoding)
-        else:
-            return filename
-
-    def fsdecode(filename):
-        if isinstance(filename, bytes):
-            return filename.decode(_encoding)
-        else:
-            return filename
-
+BIN_DIRECTORY = os.path.dirname(inspect.stack()[-1][1])
 
 
 def _get_command_paths(cmd, mode=os.F_OK | os.X_OK):
@@ -80,7 +62,7 @@ def _get_command_paths(cmd, mode=os.F_OK | os.X_OK):
             seen.add(normdir)
             for thefile in files:
                 name = os.path.join(dir, thefile)
-                if _access_check(name, mode):
+                if access_check(name, mode):
                     found_paths.append(name)
 
     return found_paths
