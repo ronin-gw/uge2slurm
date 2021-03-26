@@ -333,7 +333,6 @@ class CommandMapper(CommandMapperBase):
         #
         self.env_vars = {}
         self.script = None
-        self.script_from_stdin = None  # bool
         self.jobscript_path = None
 
     # # # pre-convert processing # # #
@@ -351,7 +350,7 @@ class CommandMapper(CommandMapperBase):
             self._merge_hard_env(d)
 
     def _load_script(self):
-        self.script_from_stdin = False
+        temp_script_required = False  # if `-b` was specified or script was input via stdin
 
         if not self._args.command:  # input script was read from stdin
             if self._args.b:
@@ -360,11 +359,7 @@ class CommandMapper(CommandMapperBase):
             if not self.script:
                 raise UGE2slurmCommandError("no input read from stdin")
 
-            self.script_from_stdin = True
-            temp_script_path = self._write_script()
-            self._logger.warning('Write stdin script to "{}"'.format(temp_script_path))
-            self.jobscript_path = temp_script_path
-
+            temp_script_required = True
             if self._args.N is None:
                 setattr(self._args, 'N', "STDIN")
         else:
@@ -376,6 +371,17 @@ class CommandMapper(CommandMapperBase):
                 except OSError as e:
                     self._logger.error('Failed to open script "{}"'.format(self._args.command[0]))
                     raise UGE2slurmCommandError(str(e))
+            else:
+                self.script = ' '.join(self._args.command)
+                temp_script_required = True
+                if self._args.N is None:
+                    setattr(self._args, 'N', self.jobscript_path)
+
+        if temp_script_required:
+            temp_script_path = self._write_script()
+            self._logger.warning('Write stdin script to "{}"'.format(temp_script_path))
+            self.jobscript_path = temp_script_path
+            setattr(self._args, "command", [])
 
         if self.script:
             self._load_extra_args()
@@ -600,7 +606,7 @@ class CommandMapper(CommandMapperBase):
     @mapmethod('b', 'S')
     def _set_interpreter(self, b, S):
         if b:
-            return
+            return ["/bin/sh"]
 
         additional_args = []
         interpreter = S
