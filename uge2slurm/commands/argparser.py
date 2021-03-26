@@ -34,7 +34,7 @@ def set_common_args(parser):
                         help="show this help message and exit")
     parser.add_argument("--version", action="version", version=uge2slurm.VERSION)
     parser.add_argument("--ignore-coloring", nargs=0, action=_disablecoloring,
-                        help="disable coloring output")
+                        help="disable colored output")
     parser.add_argument("--verbose", nargs='?', default=logging.getLogger().level,
                         const=logging.INFO, action=_set_logging_level,
                         metavar='{"critical"|"fatal","error","warn"|"warning","info","debug",int}',
