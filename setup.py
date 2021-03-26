@@ -21,7 +21,7 @@ setup(
         "Development Status :: 3 - Alpha",
         "Environment :: Console",
         "Topic :: System :: Clustering",
-        "Topic :: System :: Distributed Computing"
+        "Topic :: System :: Distributed Computing",
         "License :: OSI Approved :: MIT License",
         "Operating System :: POSIX",
         "Programming Language :: Python :: 2",

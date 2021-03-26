@@ -68,6 +68,7 @@ The partition mapping is solved by the following order:
 Examples:
 ```
 % sinfo --format "%P"
+PARTITION
 gpu.q
 gpu_intr.q
 
