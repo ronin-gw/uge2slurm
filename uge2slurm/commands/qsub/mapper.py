@@ -18,7 +18,7 @@ from .squeue import get_running_jobs
 from .sinfo import get_partitions
 from .argparser import set_qsub_arguments
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class _ExtraArgumentParser(argparse.ArgumentParser):
@@ -96,7 +96,7 @@ class CommandMapper(CommandMapperBase):
 
                 path = os.path.join(dirname, filename)
 
-        self.args += [bind_to, path]
+        return [bind_to, path]
 
     @staticmethod
     def _make_dict_from_kv(values):
@@ -112,7 +112,7 @@ class CommandMapper(CommandMapperBase):
     _optionfile = not_implemented("-@")
 
     def a(self, datetime):
-        self.args += ["--begin", datetime.isoformat()]
+        return ["--begin", datetime.isoformat()]
 
     ac = not_supported("-ac")
     adds = not_implemented("-adds")
@@ -129,13 +129,13 @@ class CommandMapper(CommandMapperBase):
     def cwd(self, value):
         if value is not True:
             return
-        self.args += ["--chdir", os.getcwd()]
+        return ["--chdir", os.getcwd()]
 
     # C
     dc = not_supported("-dc")
 
     def dl(self, datetime):
-        self.args += ["--deadline", datetime.isoformat()]
+        return ["--deadline", datetime.isoformat()]
 
     e = partialmethod(_map_path, option_name="-e", bind_to="--error", option_string='e')
     # hard
@@ -152,7 +152,7 @@ class CommandMapper(CommandMapperBase):
     masterl = not_supported("-masterl")
 
     def l(self, value):
-        # TODO: map resource request
+        additional_args = []
 
         # get hard/soft confs (None and "hard" are merged at `self.pre_convert`)
         hard_resources = self._make_dict_from_kv(value[None])
@@ -178,20 +178,22 @@ class CommandMapper(CommandMapperBase):
                 self._logger.warning("\t{} -> {}".fprmat(resource_name, partition))
             raise UGE2slurmCommandError("failed to map resource into partition.")
         elif len(specified_part) == 1:
-            self.args += ["--partition", specified_part[0][1]]
+            additional_args += ["--partition", specified_part[0][1]]
 
         #
         if not specified_part:
             for resource_name in soft_resources:
                 specified_part += [(resource_name, p) for p in partitions if p.startswith(resource_name)]
         if specified_part:
-            self.args += ["--partition", ','.join(p for _, p in specified_part)]
+            additional_args += ["--partition", ','.join(p for _, p in specified_part)]
 
         #
         for memkey in self._args.memory:
             if memkey in hard_resources:
-                self.args += ["--mem-per-cpu", hard_resources[memkey]]
+                additional_args += ["--mem-per-cpu", hard_resources[memkey]]
                 break
+
+        return additional_args
 
     def m(self, value):
         mailtypes = []
@@ -206,11 +208,11 @@ class CommandMapper(CommandMapperBase):
                 ))
 
         if mailtypes:
-            self.args += ["--mail-type", ','.join(mailtypes)]
+            return ["--mail-type", ','.join(mailtypes)]
 
     def M(self, value):
         user = self._use_1st_one(value, "-M")
-        self.args += ["--mail-user", user]
+        return ["--mail-user", user]
 
     masterq = not_supported("-masterq")
     mods = not_implemented("-mods")
@@ -225,7 +227,7 @@ class CommandMapper(CommandMapperBase):
     par = not_implemented("-par")
 
     def pe(self, value):
-        # TODO: map resource request
+        additional_args = []
 
         #
         parallel_env = {}
@@ -245,7 +247,7 @@ class CommandMapper(CommandMapperBase):
                 else:
                     pe = parallel_env[pe_name]
                 if len(pe) == 1 and len(pe[0]) == 1:
-                    self.args += ["--cpus-per-task", pe[0][0]]
+                    additional_args += ["--cpus-per-task", pe[0][0]]
                     available_pe = None
                     break
 
@@ -254,7 +256,9 @@ class CommandMapper(CommandMapperBase):
             if min_pe == 0:
                 min_pe = 1
             self._logger.warning("Range value for `-pe` is not supported. Use minimum value: {}".format(min_pe))
-            self.args += ["--cpus-per-task", min_pe]
+            additional_args += ["--cpus-per-task", min_pe]
+
+        return additional_args
 
     pty = not_implemented("-pty")
 
@@ -267,7 +271,7 @@ class CommandMapper(CommandMapperBase):
             else:
                 hosts.append(text[1])
         if hosts:
-            self.args += ["--nodelist", ','.join(hosts)]
+            return ["--nodelist", ','.join(hosts)]
 
     R = not_implemented("-R")
 
@@ -393,9 +397,10 @@ class CommandMapper(CommandMapperBase):
         self._set_interpreter()
         self._set_script()
 
-    def _map_dependency(self):
+    @mapmethod("hold_jid", "hold_jid_ad")
+    def _map_dependency(self, hold_jid, hold_jid_ad):
         dependencies = set()
-        for ids in (self._args.hold_jid, self._args.hold_jid_ad):
+        for ids in (hold_jid, hold_jid_ad):
             if ids is not None:
                 dependencies |= set(jobid for jobid in ids if not jobid.isdigit())
 
@@ -414,7 +419,7 @@ class CommandMapper(CommandMapperBase):
         nonarray_dependencies = []
         array_dependencies = []
         for container, jids in zip((nonarray_dependencies, array_dependencies),
-                                   (self._args.hold_jid, self._args.hold_jid_ad)):
+                                   (hold_jid, hold_jid_ad)):
             if jids is not None:
                 for jobid in jids:
                     if jobid in running_jids:
@@ -431,26 +436,32 @@ class CommandMapper(CommandMapperBase):
             dependencies.append("aftercorr:" + ':'.join(array_dependencies))
 
         if dependencies:
-            self.args += ["--dependency", ','.join(dependencies)]
+            return ["--dependency", ','.join(dependencies)]
 
-    def _prepare_output_path(self):
-        if self._args.o is None:
+    @mapmethod('o', 'e', 'j')
+    def _prepare_output_path(self, o, e, j):
+        additional_args = []
+
+        if o is None:
             filename = self._get_default_filename('o')
-            self.args += ["--output", filename]
+            additional_args += ["--output", filename]
 
-        if self._args.j is not True and self._args.e is None:
+        if j is not True and e is None:
             filename = self._get_default_filename('e')
-            self.args += ["--error", filename]
+            additional_args += ["--error", filename]
 
-    def _map_array(self):
+        return additional_args
+
+    @mapmethod('t', "tc")
+    def _map_array(self, t, tc):
         if not self.is_array():
             return
 
-        array = self._args.t
-        if self._args.tc:
-            array += '%' + self._args.tc
+        array = t
+        if tc:
+            array += '%' + tc
 
-        self.args += ["--array", array]
+        return ["--array", array]
 
     def _convert_envvars(self):
         envname2solver = {
@@ -515,21 +526,22 @@ class CommandMapper(CommandMapperBase):
         else:
             return os.path.basename(self._get_jobscript())
 
-    def _map_environ_vars(self):
+    @mapmethod('v', 'V')
+    def _map_environ_vars(self, v, V):
         export = []
-        if self._args.V is True:
+        if V is True:
             export.append("ALL")
 
-        if self._args.v:
-            export += self._args.v
+        if v:
+            export += v
 
-        for k, v in self.env_vars.items():
-            export.append("{}={}".format(k, v))
+        for _k, _v in self.env_vars.items():
+            export.append("{}={}".format(_k, _v))
 
         if not export:
             export.append("NONE")
 
-        self.args += ["--export", ','.join(export)]
+        return ["--export", ','.join(export)]
 
     def _set_wrapper(self):
         if not os.path.exists(self.WRAPPER_PATH):
@@ -538,21 +550,25 @@ class CommandMapper(CommandMapperBase):
                                  'exists in your path.')
         self.args.append(self.WRAPPER_PATH)
 
-    def _set_interpreter(self):
-        if self._args.b:
+    @mapmethod('b', 'S')
+    def _set_interpreter(self, b, S):
+        if b:
             return
 
-        interpreter = self._args.S
+        additional_args = []
+        interpreter = S
         if interpreter is not None:
             self.args.append(interpreter)
         else:
             self._logger.warning("Warning: interpreter for given script is not specified by `-S` option.")
             shebang = self._catch_shebang(self.script)
             if shebang is not None:
-                self.args += shebang
+                additional_args += shebang
             else:
                 self._logger.warning("use `/bin/sh` anyway.")
-                self.args.append("/bin/sh")
+                additional_args.append("/bin/sh")
+
+        return additional_args
 
     def _catch_shebang(self):
         head = self.script.split('\n')[0]

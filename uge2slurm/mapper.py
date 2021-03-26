@@ -1,4 +1,10 @@
-class CommandMapperBase:
+import logging
+from functools import wraps
+
+
+class CommandMapperBase(object):
+    _logger = logging.getLogger(__name__)
+
     def __init__(self, bin):
         self.bin = bin
         self.args = []
@@ -13,9 +19,12 @@ class CommandMapperBase:
         for dest, value in namespace.items():
             if value is None:
                 continue
+
             converter = self.dest2converter.get(dest, getattr(self, dest, None))
-            if callable(converter):
-                converter(value)
+            if not callable(converter):
+                continue
+
+            mapmethod(dest)(converter)
 
         self.post_convert()
 
@@ -43,21 +52,46 @@ def bind_if_true(option):
 
 def not_implemented(option_name):
     def _inner(self, value):
-        self._logger.warning('Converting option "{}" is not implemented'. format(option_name))
+        self._logger.warning('Converting option "{}" is not implemented.'. format(option_name))
     return _inner
 
 
 def not_supported(option_name):
     def _inner(self, value):
-        self._logger.warning('Converting option "{}" is not supported'. format(option_name))
+        self._logger.warning('Converting option "{}" is not supported.'. format(option_name))
     return _inner
+
+
+def mapmethod(*target_args):
+    def _maker(func):
+        @wraps(func)
+        def _inner(self, *args, **kwargs):
+            values = [getattr(self._args, arg) for arg in target_args]
+
+            if len(values) == 1 and values[0] is None:
+                return
+
+            if args is not None:
+                values += args
+
+            additional_args = func(self, *values, **kwargs)
+
+            input_repr = ", ".join("-{} {}".format(k, v) for k, v in zip(target_args, values))
+            self._logger.debug(input_repr + " -> {}".format(additional_args))
+
+            if additional_args:
+                if isinstance(additional_args, (tuple, list)):
+                    self.args += additional_args
+                else:
+                    self.args.append(additional_args)
+        return _inner
+    return _maker
 
 
 try:  # py2 conpativility
     from functools import partialmethod  # novermin
 except ImportError:
     from functools import partial
-    from types import GenericAlias
 
     class partialmethod(object):
         def __init__(self, func, *args, **keywords):
@@ -110,5 +144,3 @@ except ImportError:
         @property
         def __isabstractmethod__(self):
             return getattr(self.func, "__isabstractmethod__", False)
-
-        __class_getitem__ = classmethod(GenericAlias)

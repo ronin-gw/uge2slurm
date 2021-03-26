@@ -24,14 +24,25 @@ class ColorfulFormatter(logging.Formatter):
         "magenta"
     )
 
+    DEBUG_FMG = colored("DEBUG: %(name)s:", color="green") + " %(msg)s"
+
     @classmethod
     def _get_color(cls, levelno):
         return cls.COLORS[bisect(cls.LEVELS, levelno)]
 
     def format(self, record):
-        message = super().format(record)
-        color = self._get_color(record.levelno)
-        return colored(message, color=color)
+        message = super(ColorfulFormatter, self).format(record)
+
+        if record.levelno <= logging.DEBUG:
+            format_orig = self._style._fmt
+            self._style._fmt = self.DEBUG_FMG
+            message = logging.Formatter.format(self, record)
+            self._style._fmt = format_orig
+        else:
+            color = self._get_color(record.levelno)
+            message = colored(message, color=color)
+
+        return message
 
 
 def _set_root_logger():
