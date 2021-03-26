@@ -85,14 +85,14 @@ class CommandMapper(CommandMapperBase):
             else:
                 dirname, filename = os.path.split(path)
                 if dirname and not os.path.exists(dirname):
-                    self._logger.info("output log directory does not exist.")
+                    self._logger.debug("output log directory does not exist.")
                     if not self.dry_run:
                         try:
                             os.makedirs(dirname)
                         except OSError as e:
                             logger.critical(e)
                             raise UGE2slurmCommandError("failed to create log output directory.")
-                        self._logger.info('directory "{}" was created.'.format(dirname))
+                        self._logger.info('directory "{}" was created for output.'.format(dirname))
 
                 filename = filename.replace('%', "%%")
                 filename = filename.replace("$USER", "%u")
@@ -327,6 +327,8 @@ class CommandMapper(CommandMapperBase):
         #
         self.env_vars = {}
         self.script = None
+        self.script_from_stdin = None  # bool
+        self.jobscript_path = None
 
     # # # pre-convert processing # # #
     def pre_convert(self):
@@ -343,21 +345,31 @@ class CommandMapper(CommandMapperBase):
             self._merge_hard_env(d)
 
     def _load_script(self):
-        if not self._args.command:
+        self.script_from_stdin = False
+
+        if not self._args.command:  # input script was read from stdin
             if self._args.b:
                 raise UGE2slurmCommandError("command required for a binary job")
             self.script = self._read_stdin()
             if not self.script:
                 raise UGE2slurmCommandError("no input read from stdin")
+
+            self.script_from_stdin = True
+            temp_script_path = self._write_script()
+            self._logger.warning('Write stdin script to "{}"'.format(temp_script_path))
+            self.jobscript_path = temp_script_path
+
             if self._args.N is None:
                 setattr(self._args, 'N', "STDIN")
-        elif not self._args.b:
-            try:
-                with open(self._args.command[0]) as f:
-                    self.script = f.read()
-            except OSError as e:
-                self._logger.error('Failed to open script "{}"'.format(self._args.command[0]))
-                raise UGE2slurmCommandError(str(e))
+        else:
+            self.jobscript_path = self._args.command[0]
+            if not self._args.b:
+                try:
+                    with open(self._args.command[0]) as f:
+                        self.script = f.read()
+                except OSError as e:
+                    self._logger.error('Failed to open script "{}"'.format(self._args.command[0]))
+                    raise UGE2slurmCommandError(str(e))
 
         if self.script:
             self._load_extra_args()
@@ -367,6 +379,27 @@ class CommandMapper(CommandMapperBase):
         if sys.stdin.isatty():
             return
         return sys.stdin.read()
+
+    def _write_script(self):
+        prefix = os.path.join(self._HOME, "uge2slurm-")
+        now = None
+        population = string.ascii_letters + string.digits
+
+        while True:
+            _now = datetime.now()
+            if now is None or now.second != _now.second:
+                now = _now
+                path = prefix + now.strftime("%Y%m%d%H%M%S")
+            else:
+                path = prefix + now.strftime("%Y%m%d%H%M%S") + '-' + ''.join(
+                    random.choice(population) for _ in range(3)
+                )
+            try:
+                with open(path, 'x') as f:
+                    f.write(self.script)
+                return path
+            except OSError:
+                continue
 
     def _load_extra_args(self):
         prefix_string = "#$" if self._args.C is None else self._args.C
@@ -527,7 +560,7 @@ class CommandMapper(CommandMapperBase):
         return "BATCH"
 
     def _get_jobscript(self):
-        return self._args.command[0]
+        return self.jobscript_path
 
     def _get_jobname(self):
         if self._args.N:
@@ -591,28 +624,4 @@ class CommandMapper(CommandMapperBase):
         if self._args.command:
             self.args += self._args.command
         else:
-            # input script was read from stdin
-            temp_script_path = self._write_script()
-            self._logger.warning('Write to "{}" for stdin script'.format(temp_script_path))
-            self.args.append(temp_script_path)
-
-    def _write_script(self):
-        prefix = os.path.join(self._HOME, "uge2slurm-")
-        now = None
-        population = string.ascii_letters + string.digits
-
-        while True:
-            _now = datetime.now()
-            if now is None or now.second != _now.second:
-                now = _now
-                path = prefix + now.strftime("%Y%m%d%H%M%S")
-            else:
-                path = prefix + now.strftime("%Y%m%d%H%M%S") + '-' + ''.join(
-                    random.choice(population) for _ in range(3)
-                )
-            try:
-                with open(path, 'x') as f:
-                    f.write(self.script)
-                return path
-            except OSError:
-                continue
+            self.args.append(self.jobscript_path)
