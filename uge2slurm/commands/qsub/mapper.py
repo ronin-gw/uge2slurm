@@ -53,6 +53,9 @@ class CommandMapper(CommandMapperBase):
         filename = self._DEFAULT_JOB_NAME.format(option_string)
         if self.is_array():
             filename += ".%a"
+        if self._args.cwd is not True:
+            filename = os.path.join(self._HOME, filename)
+
         return filename
 
     @classmethod
@@ -75,6 +78,9 @@ class CommandMapper(CommandMapperBase):
     def _map_path(self, value, option_name, bind_to, option_string, is_output=True):
         path = self._use_1st_one(value, option_name)
         path = self._remove_host(path, option_name)
+
+        if self._args.cwd is not True and not os.path.isabs(path):
+            path = os.path.join(self._HOME, path)
 
         if is_output:
             if os.path.isdir(path):
