@@ -530,12 +530,13 @@ class CommandMapper(CommandMapperBase):
 
         try:
             name2jobid = get_running_jobs()
-        except UGE2slurmCommandError:
+        except UGE2slurmCommandError as e:
             if self.dry_run:
+                self._logger.warning(e)
                 return
             else:
                 raise
-        running_jids = reduce(lambda a, b: a.update(b), name2jobid.values())
+        running_jids = reduce(lambda a, b: a | b, name2jobid.values(), set())
 
         nonarray_dependencies = []
         array_dependencies = []
@@ -546,7 +547,9 @@ class CommandMapper(CommandMapperBase):
                     if jobid in running_jids:
                         container.append(jobid)
                     elif jobid in name2jobid:
-                        container += [i for i in jobid[name2jobid]]
+                        ds = [str(i) for i in name2jobid[jobid]]
+                        self._logger.debug("dependency: {} -> {}".format(jobid, ', '.join(ds)))
+                        container += ds
                     else:
                         self._logger.info('Job "{}" is not running.'.format(jobid))
 

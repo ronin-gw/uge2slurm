@@ -7,7 +7,7 @@ def get_running_jobs():
     res = run_command("squeue", ["--noheader", "--me", "--format", "%i %j"])
 
     name2jobid = defaultdict(set)
-    for line in res.stdout:
+    for line in res.stdout.rstrip().split('\n'):
         jobid, jobname = line.split(' ', 1)
         name2jobid[jobname].add(int(jobid))
 
