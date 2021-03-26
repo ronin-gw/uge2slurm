@@ -7,19 +7,12 @@ from uge2slurm.commands import UGE2slurmCommandError
 
 from .argparser import get_parser, parser_args
 from .mapper import CommandMapper
-from .bypass import use_qsub_if_avail
 
 logger = logging.getLogger(__name__)
 
 
 @entrypoint(logger)
 def main():
-    #
-    executed = use_qsub_if_avail()
-    if executed:
-        return
-
-    #
     parser = get_parser()
     args = parser.parse_args()
     run(args)
