@@ -563,7 +563,7 @@ class CommandMapper(CommandMapperBase):
         if interpreter is not None:
             self.args.append(interpreter)
         else:
-            self._logger.warning("Warning: interpreter for given script is not specified by `-S` option.")
+            self._logger.warning("interpreter for given script is not specified by `-S` option.")
             shebang = self._catch_shebang()
             if shebang is not None:
                 additional_args += shebang

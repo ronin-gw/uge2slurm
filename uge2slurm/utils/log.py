@@ -49,7 +49,7 @@ def _set_root_logger():
     rl = logging.getLogger(NAME)
 
     h = logging.StreamHandler()
-    h.setFormatter(ColorfulFormatter())
+    h.setFormatter(ColorfulFormatter(fmt="%(levelname)s: %(msg)s"))
 
     rl.addHandler(h)
 

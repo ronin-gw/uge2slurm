@@ -87,7 +87,7 @@ def get_command_path(cmd, verbose=False):
     candidates = get_command_paths(cmd)
     if len(candidates) > 1:
         if verbose:
-            logger.warning('Warning: "{}" command found at mutiple paths. '
+            logger.warning('"{}" command found at mutiple paths. '
                            'Use 1st one anyway.'.format(cmd))
             cprint("\t{} -> {}".format(cmd, candidates), "yellow")
         return candidates[0]
