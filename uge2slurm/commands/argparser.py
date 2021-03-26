@@ -1,12 +1,10 @@
 from __future__ import absolute_import
 
 import argparse
-import datetime
 import logging
+from datetime import datetime
 
 import uge2slurm
-
-from . import UGE2slurmCommandError
 
 
 class _disablecoloring(argparse.Action):
@@ -54,12 +52,13 @@ def get_top_parser():
 
 def parse_ge_datetime(value):
     _value = value.split('.', 1)
-    if len(value) == 1:
+    if len(_value) == 1:
         dt, seconds = _value[0], None
     else:
         dt, seconds = _value
 
     year = datetime.now().year
+
     if len(dt) == 8:
         fmt = "%m%d%H%M"
     elif len(dt) == 10:
@@ -71,7 +70,7 @@ def parse_ge_datetime(value):
     elif len(dt) == 12:
         fmt = "%Y%m%d%H%M"
     else:
-        raise UGE2slurmCommandError('invalid datetime format: "{}"'.format(value))
+        raise argparse.ArgumentError('invalid datetime format: "{}"'.format(value))
 
     if '.' in value:
         fmt += ".%S"
@@ -79,7 +78,7 @@ def parse_ge_datetime(value):
     try:
         dt = datetime.strptime(value, fmt)
     except ValueError:
-        raise UGE2slurmCommandError('invalid datetime format: "{}"'.format(value))
+        raise argparse.ArgumentError('invalid datetime format: "{}"'.format(value))
 
     if dt.year == 1900:
         dt = dt.replace(year=year)

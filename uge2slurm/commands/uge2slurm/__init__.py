@@ -1,5 +1,6 @@
 from __future__ import print_function, absolute_import
 
+import sys
 import logging
 
 from uge2slurm import VERSION
@@ -85,9 +86,8 @@ def main():
 
     if args is not None and args.func:
         return args.func(args)
-    else:
+    elif len(sys.argv) == 1:
         print(parser.prog, VERSION)
-        parser.print_usage()
 
         print("\nUGE Commands:")
         _print_command_status(UGE_COMMAND_NAMES)
