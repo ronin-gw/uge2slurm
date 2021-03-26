@@ -400,12 +400,11 @@ class CommandMapper(CommandMapperBase):
                 path = prefix + now.strftime("%Y%m%d%H%M%S") + '-' + ''.join(
                     random.choice(population) for _ in range(3)
                 )
-            try:
-                with open(path, 'x') as f:
-                    f.write(self.script)
-                return path
-            except OSError:
+            if os.path.isfile(path):
                 continue
+            with open(path, 'w') as f:
+                f.write(self.script)
+            return path
 
     def _load_extra_args(self):
         prefix_string = "#$" if self._args.C is None else self._args.C

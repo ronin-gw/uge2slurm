@@ -30,6 +30,14 @@ class ColorfulFormatter(logging.Formatter):
     def _get_color(cls, levelno):
         return cls.COLORS[bisect(cls.LEVELS, levelno)]
 
+    def __init__(self, *args, **kwargs):
+        """
+        Python2.7 compatibility: unable to use `self._style`.
+        """
+        super(ColorfulFormatter, self).__init__(*args, **kwargs)
+        if not hasattr(self, "_style"):
+            self._style = self
+
     def format(self, record):
         message = super(ColorfulFormatter, self).format(record)
 

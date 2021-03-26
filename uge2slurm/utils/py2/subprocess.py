@@ -3,7 +3,7 @@ from __future__ import absolute_import
 from subprocess import Popen, PIPE, CalledProcessError
 
 
-try:  # py2 compatibility
+try:
     from subprocess import run  # novermin
 except ImportError:
     class CompletedProcess(object):
@@ -27,16 +27,41 @@ except ImportError:
                 raise CalledProcessError(self.returncode, self.args, self.stdout,
                                          self.stderr)
 
+    class _Popen(Popen):
+        """
+        Backport for context manager support.
+        source: https://github.com/python/cpython/blob/2d1cbe4193499914ccc9d217ea63eb17ff927c91/Lib/subprocess.py
+        """
+        def __init__(self, args, *_args, **kwargs):
+            self.args = args
+            super(_Popen, self).__init__(args, *_args, **kwargs)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, value, traceback):
+            if self.stdout:
+                self.stdout.close()
+            if self.stderr:
+                self.stderr.close()
+            try:
+                if self.stdin:
+                    self.stdin.close()
+            finally:
+                if exc_type == KeyboardInterrupt:
+                    return
+                self.wait()
+
     def run(*popenargs, **kwargs):
         input = None if "input" not in kwargs else kwargs["input"]
-        check = False if "check" not in kwargs else kwargs["check"]
+        check = False if "check" not in kwargs else kwargs.pop("check")
 
         if input is not None:
             if 'stdin' in kwargs:
                 raise ValueError('stdin and input arguments may not both be used.')
             kwargs['stdin'] = PIPE
 
-        with Popen(*popenargs, **kwargs) as process:
+        with _Popen(*popenargs, **kwargs) as process:
             try:
                 stdout, stderr = process.communicate(input)
             except:  # noqa
