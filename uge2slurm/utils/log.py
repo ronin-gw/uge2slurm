@@ -85,9 +85,16 @@ def print_command(command):
     print(command[0])
     i = 1
     while i < len(command) - 1:
-        if command[i].startswith('-'):
-            print('\t', command[i], command[i + 1])
-            i += 2
+        if command[i].startswith("--"):
+            try:
+                if command[i + 1].startswith("--"):
+                    raise IndexError
+                else:
+                    print('\t', command[i], command[i + 1])
+                    i += 2
+            except IndexError:
+                print('\t', command[i])
+                i += 1
         else:
             break
     print('\t', *command[i:])
