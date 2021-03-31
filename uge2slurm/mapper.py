@@ -43,14 +43,14 @@ class CommandMapperBase(object):
 
 def bind_to(option):
     def _inner(self, value):
-        self.args += [option, value]
+        return [option, value]
     return _inner
 
 
 def bind_if_true(option):
     def _inner(self, value):
         if value is True:
-            self.args.append(option)
+            return [option]
     return _inner
 
 
