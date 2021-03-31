@@ -32,7 +32,7 @@ class CommandMapperBase(object):
 
         self.post_convert()
 
-        return [self.bin] + self.args
+        return [str(arg) for arg in [self.bin] + self.args]
 
     def pre_convert(self):
         pass
