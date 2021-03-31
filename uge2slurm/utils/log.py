@@ -24,7 +24,9 @@ class ColorfulFormatter(logging.Formatter):
         "magenta"
     )
 
-    DEBUG_FMG = colored("DEBUG: %(name)s:", color="green") + " %(msg)s"
+    @staticmethod
+    def _get_debug_fmt():
+        return colored("DEBUG: %(name)s:", color="green") + " %(msg)s"
 
     @classmethod
     def _get_color(cls, levelno):
@@ -43,7 +45,7 @@ class ColorfulFormatter(logging.Formatter):
 
         if record.levelno <= logging.DEBUG:
             format_orig = self._style._fmt
-            self._style._fmt = self.DEBUG_FMG
+            self._style._fmt = self._get_debug_fmt()
             message = logging.Formatter.format(self, record)
             self._style._fmt = format_orig
         else:
