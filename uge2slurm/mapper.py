@@ -68,7 +68,6 @@ def not_supported(option_name):
 
 def mapmethod(*target_args):
     def _maker(func):
-        @wraps(func)
         def _inner(self, *args, **kwargs):
             values = [getattr(self._args, arg) for arg in target_args]
 
