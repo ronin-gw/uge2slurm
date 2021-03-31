@@ -8,8 +8,14 @@ Grid Engine to Slurm command converter
 
 * * *
 
+## Installation
+
 uge2slurm provides conversion from `qsub` command in UGE/SGE to Slurm's `sbatch`
 command.
+
+```
+pip install uge2slurm
+```
 
 After installation, the following commands are available.
 - uge2slurm [{qsub}]

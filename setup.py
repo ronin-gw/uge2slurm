@@ -14,7 +14,7 @@ setup(
     description=DESCRIPTION,
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/ronin_gw/uge2slurm",
+    url="https://github.com/ronin-gw/uge2slurm",
     author="Hayato Anzawa",
     author_email="anzawa@sb.ecei.tohoku.ac.jp",
     classifiers=[
