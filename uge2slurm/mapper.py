@@ -87,5 +87,10 @@ def mapmethod(*target_args):
                     self.args += additional_args
                 else:
                     self.args.append(additional_args)
+
+        # python2.7 does not ignore AttributeError
+        if not isinstance(func, partial):
+            _inner = wraps(func)(_inner)
+
         return _inner
     return _maker
