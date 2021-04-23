@@ -21,6 +21,33 @@ After installation, the following commands are available.
 - uge2slurm [{qsub}]
 - qsub \<qsub args>
 
+The following commands are installed as a part of uge2slurm but current version
+does not support command conversions.
+
+- qacct
+- qalter
+- qconf
+- qdel
+- qhold
+- qhost
+- qlogin
+- qmake
+- qmod
+- qmon
+- qping
+- qquota
+- qralter
+- qrdel
+- qresub
+- qrls
+- qrsh
+- qrstat
+- qrsub
+- qselect
+- qsh
+- qstat
+
+
 ## Command usage
 
 These options are commonly available for all subcommands.
