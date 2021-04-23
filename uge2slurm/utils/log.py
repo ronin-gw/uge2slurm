@@ -5,7 +5,7 @@ import logging
 from bisect import bisect
 from functools import wraps
 
-from uge2slurm import UGE2slurmError, NAME
+from uge2slurm import UGE2slurmError, NAME, VERSION
 from uge2slurm.utils.color import colored
 
 
@@ -68,8 +68,11 @@ def entrypoint(logger):
     def _wrapper(func):
         @wraps(func)
         def _inner(*args, **kwargs):
+            print("This is uge2slurm " + VERSION, file=sys.stderr)
             try:
                 _set_root_logger()
+                for line in sys.version.split('\n'):
+                    logger.debug(line)
                 sys.exit(func(*args, **kwargs))
             except KeyboardInterrupt:
                 sys.exit(130)
@@ -98,3 +101,11 @@ def print_command(command):
         else:
             break
     print('\t', *command[i:])
+
+
+def suggest_slurm(qcommand, scommand=None):
+    msg = "`{}` command is not supported.".format(qcommand)
+    if scommand:
+        msg += "\nPlease use `{}` instead.".format(scommand)
+    msg += '\n'
+    print(msg, file=sys.stderr)

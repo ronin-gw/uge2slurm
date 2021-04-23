@@ -42,7 +42,30 @@ setup(
     entry_points={
         "console_scripts": [
             "uge2slurm = uge2slurm.commands.uge2slurm:main",
-            "qsub = uge2slurm.commands.qsub:main"
+            "qmake = uge2slurm.commands.qmake:main",
+            "qdel = uge2slurm.commands.qdel:main",
+            "qsh = uge2slurm.commands.qsh:main",
+            "qralter = uge2slurm.commands.qralter:main",
+            "qsub = uge2slurm.commands.qsub:main",
+            "wrapper = uge2slurm.commands.wrapper:main",
+            "qstat = uge2slurm.commands.qstat:main",
+            "qconf = uge2slurm.commands.qconf:main",
+            "qmod = uge2slurm.commands.qmod:main",
+            "qhold = uge2slurm.commands.qhold:main",
+            "qresub = uge2slurm.commands.qresub:main",
+            "qrdel = uge2slurm.commands.qrdel:main",
+            "qacct = uge2slurm.commands.qacct:main",
+            "qrsub = uge2slurm.commands.qrsub:main",
+            "qrstat = uge2slurm.commands.qrstat:main",
+            "qhost = uge2slurm.commands.qhost:main",
+            "qquota = uge2slurm.commands.qquota:main",
+            "qrls = uge2slurm.commands.qrls:main",
+            "qping = uge2slurm.commands.qping:main",
+            "qlogin = uge2slurm.commands.qlogin:main",
+            "qmon = uge2slurm.commands.qmon:main",
+            "qalter = uge2slurm.commands.qalter:main",
+            "qrsh = uge2slurm.commands.qrsh:main",
+            "qselect = uge2slurm.commands.qselect:main"
         ]
     },
     package_dir={"uge2slurm.commands": "uge2slurm/commands"},
