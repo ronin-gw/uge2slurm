@@ -76,6 +76,11 @@ The following options can be specified besides `qsub` arguments.
 #### -n/--dry-run
 Print converted Slurm command and exit.
 
+#### -y/--non-interactive
+By default, uge2slurm shows a converted command line and get confirmation before
+the execution when a TTY is allocated. This option disables the preview
+and the command will be executed immediately.
+
 #### --memory resource [...]
 Specify which resource value should be mapped into `--mem-per-cpu` option.
 If multiple values are specified, the first valid value will be used.
