@@ -2,11 +2,15 @@ from __future__ import print_function
 
 import sys
 import logging
+import array
+import fcntl
 from bisect import bisect
 from functools import wraps
+from termios import TIOCGWINSZ
 
 from uge2slurm import UGE2slurmError, NAME, VERSION
 from uge2slurm.utils.color import colored
+from uge2slurm.utils.py2 import input
 
 
 class ColorfulFormatter(logging.Formatter):
@@ -85,7 +89,7 @@ def entrypoint(logger):
 
 
 def print_command(command):
-    print(command[0])
+    print(command[0], "\\")
     i = 1
     while i < len(command) - 1:
         if command[i].startswith("--"):
@@ -93,10 +97,10 @@ def print_command(command):
                 if command[i + 1].startswith("--"):
                     raise IndexError
                 else:
-                    print('\t', command[i], command[i + 1])
+                    print('\t', command[i], command[i + 1], "\\")
                     i += 2
             except IndexError:
-                print('\t', command[i])
+                print('\t', command[i], "\\")
                 i += 1
         else:
             break
@@ -109,3 +113,33 @@ def suggest_slurm(qcommand, scommand=None):
         msg += "\nPlease use `{}` instead.".format(scommand)
     msg += '\n'
     print(msg, file=sys.stderr)
+
+
+def is_interactive():
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def get_tty_width():
+    buf = array.array('H', ([0] * 4))
+    try:
+        fcntl.ioctl(sys.stdout.fileno(), TIOCGWINSZ, buf, 1)
+        return buf[1]
+    except IOError:
+        return 32
+
+
+def confirm_command(command):
+    #
+    width = get_tty_width()
+    print("\n{}\n".format("=====  Converted command  ".ljust(width, '=')), file=sys.stderr)
+    print_command(command)
+    print("\n{}\n".format('=' * width), file=sys.stderr)
+
+    #
+    while True:
+        res = input("Submit? [y/N] ")
+        res = res.lower()
+        if res in ('y', "yes"):
+            return True
+        elif res in ('', 'n', 'no'):
+            return False

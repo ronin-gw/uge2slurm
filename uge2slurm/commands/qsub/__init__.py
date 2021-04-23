@@ -1,7 +1,7 @@
 import logging
 
 from uge2slurm.utils.path import get_command_path
-from uge2slurm.utils.log import entrypoint, print_command
+from uge2slurm.utils.log import entrypoint, print_command, is_interactive, confirm_command
 from uge2slurm.utils.slurm import run_command
 from uge2slurm.commands import UGE2slurmCommandError
 
@@ -38,6 +38,11 @@ def run(args):
         logger.debug(args)
         print_command(command)
         return
+
+    if is_interactive() and not args.non_interactive:
+        res = confirm_command(command)
+        if res is False:
+            return
 
     run_command(None, command, stdout=None, stderr=None)
 
